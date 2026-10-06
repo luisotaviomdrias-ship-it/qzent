@@ -1306,13 +1306,13 @@ function publicRoute(h) {
   const root = $('#public-content');
   if (h === '#/entrevistado') {
     const questionnaires = publishedQuestionnaires();
-    root.innerHTML = publicHeader('Sou entrevistado', 'Escolha o formulário disponibilizado pelo entrevistador. Você não precisa de senha.') + (questionnaires.length ? `<div class="grid gap-4">${questionnaires.map(q => `<article class="card p-6"><h2 class="text-lg font-bold">${esc(q.title)}</h2><p class="text-muted text-sm mt-2 whitespace-pre-wrap">${esc(q.description)}</p><p class="text-xs text-blue-400 my-4">${q.questions.length} pergunta(s)</p><a class="btn btn-primary" href="#/responder/${encodeURIComponent(q.id)}">Responder formulário</a><a class="btn btn-ghost mt-3 sm:ml-2" href="#/responder/${encodeURIComponent(q.id)}?anonimo=1">Responder anonimamente</a></article>`).join('')}</div>` : emptyState(ICONS.forms, 'Perguntas ainda não disponíveis', 'O entrevistador está preparando o questionário. Volte quando as perguntas forem adicionadas.'));
+    root.innerHTML = publicHeader('Sou entrevistado', 'Escolha o formulário disponibilizado pelo entrevistador. Você não precisa de senha.') + (questionnaires.length ? `<div class="grid gap-4">${questionnaires.map(q => `<article class="card p-6"><h2 class="text-lg font-bold">${esc(q.title)}</h2><p class="text-muted text-sm mt-2 whitespace-pre-wrap">${esc(q.description)}</p><p class="text-xs text-blue-400 my-4">${q.questions.length} pergunta(s)</p><a class="btn btn-primary" href="#/responder/${encodeURIComponent(q.id)}">Responder formulário</a><a class="btn btn-ghost mt-3 sm:ml-2" href="#/responder/${encodeURIComponent(q.id)}?anonimo=1">Responder anonimamente</a><a class="btn btn-ghost mt-3 sm:ml-2" href="#/responder/${encodeURIComponent(q.id)}?professor=1">Sou professor</a></article>`).join('')}</div>` : emptyState(ICONS.forms, 'Perguntas ainda não disponíveis', 'O entrevistador está preparando o questionário. Volte quando as perguntas forem adicionadas.'));
     return;
   }
   if (h.startsWith('#/responder/')) {
     const [encodedId, query = ''] = h.slice('#/responder/'.length).split('?');
     let id; try { id = decodeURIComponent(encodedId); } catch (_) { id = ''; }
-    return renderPublicForm(id, query === 'anonimo=1');
+    return renderPublicForm(id, query === 'anonimo=1', query === 'professor=1');
   }
   if (h === '#/finalidade') {
     root.innerHTML = publicHeader('Finalidade do site', 'Conheça o objetivo deste projeto.') + `<article class="card p-6 md:p-8"><p class="text-slate-200 leading-relaxed whitespace-pre-wrap">${esc(DB.purpose?.trim() || 'A descrição da finalidade do site será adicionada em breve.')}</p></article>`;
@@ -1335,18 +1335,19 @@ function publicQuestionInput(q, index) {
   if (Q_TYPES[q.type].numeric) options = Array.from({length: Q_TYPES[q.type].max - Q_TYPES[q.type].min + 1}, (_, n) => String(Q_TYPES[q.type].min + n));
   return options.map(o => `<label class="public-option"><input type="${q.type === 'multi' ? 'checkbox' : 'radio'}" name="${name}" value="${esc(o)}" ${q.type === 'multi' ? '' : required}><span>${esc(o)}</span></label>`).join('');
 }
-function renderPublicForm(id, anonymous = false) {
+function renderPublicForm(id, anonymous = false, teacher = false) {
   const qq = publishedQuestionnaires().find(q => q.id === id);
   const root = $('#public-content');
   if (!qq) { root.innerHTML = publicHeader('Formulário indisponível', 'As perguntas ainda não foram publicadas ou este formulário foi desativado.'); return; }
-  root.innerHTML = `<div class="max-w-2xl mx-auto">${publicHeader(qq.title, qq.description || (anonymous ? 'Responda às perguntas sem informar nome ou sala.' : 'Preencha seus dados e responda às perguntas abaixo.'))}<p class="text-xs text-muted mb-5">* Campos obrigatórios. As respostas ficam salvas neste navegador.</p><form id="respondent-form">${anonymous ? '<div class="badge badge-blue mb-5">Modo anônimo · sem nome e sala</div>' : `<div class="card public-question border-t-4 border-blue-500"><label for="respondent-name" class="lbl">Nome do entrevistado (opcional)</label><input id="respondent-name" name="personName" class="input mb-4" maxlength="120" autocomplete="name" placeholder="Pode deixar em branco"><label for="respondent-room" class="lbl">Sala *</label><input id="respondent-room" name="room" class="input" required maxlength="80" placeholder="Ex.: 104"></div><button type="button" id="switch-anonymous" class="btn btn-ghost w-full mb-5">Prefiro responder anonimamente</button>`}${qq.questions.map((q, index) => `<fieldset class="card public-question" data-question="${index}"><legend>${index+1}. ${esc(q.text)} ${q.required ? '<span class="text-red-400">*</span>' : ''}</legend>${q.hint ? `<p class="text-sm text-muted mt-2">${esc(q.hint)}</p>` : ''}${publicQuestionInput(q,index)}</fieldset>`).join('')}<p id="public-form-error" class="text-red-400 text-sm mb-4" role="alert"></p><button class="btn btn-primary w-full !py-3" type="submit">Enviar respostas</button><a href="#/entrevistado" class="btn btn-ghost w-full mt-3">Voltar aos formulários</a></form></div>`;
+  root.innerHTML = `<div class="max-w-2xl mx-auto">${publicHeader(qq.title, qq.description || (anonymous ? 'Responda às perguntas sem informar nome ou sala.' : teacher ? 'Informe seu nome e responda às perguntas abaixo.' : 'Preencha seus dados e responda às perguntas abaixo.'))}<p class="text-xs text-muted mb-5">* Campos obrigatórios. As respostas ficam salvas neste navegador.</p><form id="respondent-form">${anonymous ? '<div class="badge badge-blue mb-5">Modo anônimo · sem nome e sala</div>' : teacher ? `<div class="badge badge-blue mb-5">Sou professor</div><div class="card public-question border-t-4 border-blue-500"><label for="respondent-name" class="lbl">Nome do professor *</label><input id="respondent-name" name="personName" class="input" required maxlength="120" autocomplete="name" placeholder="Informe seu nome"></div>` : `<div class="card public-question border-t-4 border-blue-500"><label for="respondent-name" class="lbl">Nome do entrevistado (opcional)</label><input id="respondent-name" name="personName" class="input mb-4" maxlength="120" autocomplete="name" placeholder="Pode deixar em branco"><label for="respondent-room" class="lbl">Sala *</label><input id="respondent-room" name="room" class="input" required maxlength="80" placeholder="Ex.: 104"></div><button type="button" id="switch-anonymous" class="btn btn-ghost w-full mb-5">Prefiro responder anonimamente</button>`}${qq.questions.map((q, index) => `<fieldset class="card public-question" data-question="${index}"><legend>${index+1}. ${esc(q.text)} ${q.required ? '<span class="text-red-400">*</span>' : ''}</legend>${q.hint ? `<p class="text-sm text-muted mt-2">${esc(q.hint)}</p>` : ''}${publicQuestionInput(q,index)}</fieldset>`).join('')}<p id="public-form-error" class="text-red-400 text-sm mb-4" role="alert"></p><button class="btn btn-primary w-full !py-3" type="submit">Enviar respostas</button><a href="#/entrevistado" class="btn btn-ghost w-full mt-3">Voltar aos formulários</a></form></div>`;
   const anonymousButton = $('#switch-anonymous');
-  if (anonymousButton && !anonymous) anonymousButton.onclick = () => navigate('#/responder/' + encodeURIComponent(id) + '?anonimo=1');
+  if (anonymousButton && !anonymous && !teacher) anonymousButton.onclick = () => navigate('#/responder/' + encodeURIComponent(id) + '?anonimo=1');
   $('#respondent-form').onsubmit = e => {
     e.preventDefault();
     const form = e.currentTarget, data = new FormData(form), answers = {};
     const error = $('#public-form-error'); error.textContent = '';
-    if (!anonymous && !String(data.get('room') || '').trim()) { error.textContent = 'Informe sua sala.'; return; }
+    if (teacher && !String(data.get('personName') || '').trim()) { error.textContent = 'Informe seu nome.'; return; }
+    if (!anonymous && !teacher && !String(data.get('room') || '').trim()) { error.textContent = 'Informe sua sala.'; return; }
     const current = publishedQuestionnaires().find(q => q.id === id);
     if (!current || current.updatedAt !== qq.updatedAt) { error.textContent = 'Este formulário foi alterado. Reabra-o para responder à versão atual.'; return; }
     for (let index = 0; index < qq.questions.length; index++) {
@@ -1359,7 +1360,7 @@ function renderPublicForm(id, anonymous = false) {
       if (Q_TYPES[q.type].numeric && value !== '') value = Number(value);
       answers[q.id] = value;
     }
-    const record = { id: uid(), demo: false, anonymous, personName: anonymous ? 'Anônimo' : (String(data.get('personName') || '').trim() || 'Não informado'), room: anonymous ? 'Não informado' : String(data.get('room') || '').trim(), date: todayISO(), time: nowTime(), questionnaireId: qq.id, questionnaireTitle: qq.title, interviewer: 'Resposta pelo formulário', obs: '', createdAt: Date.now(), answers };
+    const record = { id: uid(), demo: false, anonymous, respondentRole: teacher ? 'professor' : (anonymous ? 'anonimo' : 'entrevistado'), personName: anonymous ? 'Anônimo' : (String(data.get('personName') || '').trim() || 'Não informado'), room: anonymous || teacher ? 'Não informado' : String(data.get('room') || '').trim(), date: todayISO(), time: nowTime(), questionnaireId: qq.id, questionnaireTitle: qq.title, interviewer: 'Resposta pelo formulário', obs: teacher ? 'Respondente: professor' : '', createdAt: Date.now(), answers };
     DB.interviews.push(record);
     try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
     catch (_) { DB.interviews.pop(); error.textContent = 'Não foi possível salvar. Mantenha esta página aberta e tente novamente.'; return; }

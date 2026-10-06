@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>QZent · Sistema de Questionários e Entrevistas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: { ink:'#0a0c10', panel:'#10131a', panel2:'#151923', line:'#232a38', accent:'#3b82f6', accent2:'#60a5fa', muted:'#8b94a7' },
+  fontFamily: { sans:['Inter','system-ui','sans-serif'], mono:['JetBrains Mono','monospace'] }
+}}};
+</script>
+<style>
+:root{ --accent:#3b82f6; }
+*{ -webkit-tap-highlight-color:transparent; }
+html{ scroll-behavior:smooth; }
+body{ background:#0a0c10; color:#e7eaf0; font-family:'Inter',system-ui,sans-serif; }
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:#0d1016; }
+::-webkit-scrollbar-thumb{ background:#242c3b; border-radius:8px; border:2px solid #0d1016; }
+::-webkit-scrollbar-thumb:hover{ background:#33405a; }
+
+.card{ background:linear-gradient(180deg,#12161f 0%,#0f131b 100%); border:1px solid #20283680; border-radius:16px; box-shadow:0 8px 24px -12px rgba(0,0,0,.6); }
+.card-hover{ transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.card-hover:hover{ transform:translateY(-2px); border-color:#3b82f655; box-shadow:0 14px 34px -14px rgba(59,130,246,.22); }
+
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; font-weight:600; font-size:.875rem; border-radius:10px; padding:.6rem 1.1rem; transition:all .16s ease; cursor:pointer; border:1px solid transparent; user-select:none; }
+.btn:active{ transform:scale(.97); }
+.btn-primary{ background:linear-gradient(180deg,#3b82f6,#2563eb); color:#fff; box-shadow:0 6px 18px -8px rgba(59,130,246,.7); }
+.btn-primary:hover{ background:linear-gradient(180deg,#4c8ffb,#2f6fed); }
+.btn-ghost{ background:#161b26; color:#c6cddc; border-color:#252d3d; }
+.btn-ghost:hover{ background:#1c2330; border-color:#33405a; color:#fff; }
+.btn-danger{ background:#1a1218; color:#f87171; border-color:#3d2230; }
+.btn-danger:hover{ background:#2a1620; border-color:#5b2a3c; }
+.btn[disabled]{ opacity:.45; pointer-events:none; }
+
+.input{ width:100%; background:#0d1119; border:1px solid #232a38; border-radius:10px; padding:.62rem .85rem; font-size:.9rem; color:#e7eaf0; outline:none; transition:border-color .15s, box-shadow .15s; }
+.input::placeholder{ color:#5b6474; }
+.input:focus{ border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.16); }
+select.input{ appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b94a7' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .8rem center; padding-right:2.2rem; }
+.input.err{ border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.14); }
+label.lbl{ display:block; font-size:.78rem; font-weight:600; color:#8b94a7; margin-bottom:.35rem; letter-spacing:.02em; text-transform:uppercase; }
+
+.badge{ display:inline-flex; align-items:center; gap:.35rem; font-size:.7rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.22rem .6rem; border-radius:999px; }
+.badge-blue{ background:rgba(59,130,246,.14); color:#7db3fb; border:1px solid rgba(59,130,246,.3); }
+.badge-green{ background:rgba(34,197,94,.12); color:#4ade80; border:1px solid rgba(34,197,94,.3); }
+.badge-gray{ background:rgba(139,148,167,.1); color:#8b94a7; border:1px solid rgba(139,148,167,.25); }
+.badge-amber{ background:rgba(245,158,11,.12); color:#fbbf24; border:1px solid rgba(245,158,11,.3); }
+.dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+.dot-live{ background:#22c55e; box-shadow:0 0 0 0 rgba(34,197,94,.6); animation:pulse 2s infinite; }
+@keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(34,197,94,.5);} 70%{box-shadow:0 0 0 7px rgba(34,197,94,0);} 100%{box-shadow:0 0 0 0 rgba(34,197,94,0);} }
+
+.nav-item{ display:flex; align-items:center; gap:.75rem; padding:.65rem .9rem; border-radius:10px; font-size:.9rem; font-weight:500; color:#9aa3b5; cursor:pointer; transition:all .15s; border:1px solid transparent; }
+.nav-item:hover{ color:#e7eaf0; background:#161b26; }
+.nav-item.active{ color:#fff; background:linear-gradient(90deg,rgba(59,130,246,.18),rgba(59,130,246,.05)); border-color:rgba(59,130,246,.35); }
+.nav-item.active .nav-ico{ color:#60a5fa; }
+
+.tbl{ width:100%; border-collapse:collapse; font-size:.86rem; }
+.tbl th{ text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:#6d7688; font-weight:700; padding:.7rem .9rem; border-bottom:1px solid #202836; white-space:nowrap; }
+.tbl td{ padding:.75rem .9rem; border-bottom:1px solid #1a2130; color:#c6cddc; vertical-align:middle; }
+.tbl tbody tr{ transition:background .12s; }
+.tbl tbody tr:hover{ background:rgba(59,130,246,.05); }
+
+.progress-track{ height:8px; background:#1a2130; border-radius:99px; overflow:hidden; }
+.progress-fill{ height:100%; background:linear-gradient(90deg,#2563eb,#60a5fa); border-radius:99px; transition:width .35s ease; }
+
+.skeleton{ position:relative; overflow:hidden; background:#151a24; border-radius:10px; }
+.skeleton::after{ content:''; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent); animation:shim 1.4s infinite; }
+@keyframes shim{ 100%{ transform:translateX(100%);} }
+
+.toast{ display:flex; align-items:center; gap:.65rem; background:#141926; border:1px solid #27324a; border-radius:12px; padding:.75rem 1rem; font-size:.87rem; font-weight:500; box-shadow:0 16px 40px -12px rgba(0,0,0,.7); animation:toastIn .28s cubic-bezier(.2,.9,.3,1.2); max-width:340px; }
+.toast.out{ animation:toastOut .25s ease forwards; }
+@keyframes toastIn{ from{ opacity:0; transform:translateY(12px) scale(.96);} to{opacity:1; transform:none;} }
+@keyframes toastOut{ to{ opacity:0; transform:translateY(8px);} }
+
+.opt-chip{ display:flex; align-items:center; gap:.5rem; background:#0d1119; border:1px solid #232a38; border-radius:10px; padding:.55rem .8rem; cursor:pointer; transition:all .14s; font-size:.88rem; }
+.opt-chip:hover{ border-color:#3b82f688; }
+.opt-chip.sel{ border-color:#3b82f6; background:rgba(59,130,246,.12); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+
+.q-card{ background:#10141d; border:1px solid #20283680; border-radius:14px; transition:border-color .15s; }
+.q-card:hover{ border-color:#33405a; }
+
+.fade-in{ animation:fadeIn .25s ease; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+.modal-bg{ background:rgba(5,7,11,.72); backdrop-filter:blur(6px); }
+
+.scale-num{ width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.95rem; background:#0d1119; border:1px solid #232a38; color:#8b94a7; cursor:pointer; transition:all .13s; }
+.scale-num:hover{ border-color:#3b82f6; color:#fff; }
+.scale-num.sel{ background:linear-gradient(180deg,#3b82f6,#2563eb); color:#fff; border-color:#3b82f6; box-shadow:0 4px 14px -4px rgba(59,130,246,.6); }
+
+.seg{ display:inline-flex; background:#0d1119; border:1px solid #232a38; border-radius:10px; padding:3px; gap:2px; }
+.seg button{ padding:.38rem .8rem; font-size:.78rem; font-weight:600; border-radius:8px; color:#8b94a7; transition:all .13s; }
+.seg button.on{ background:#1d2a44; color:#9ec5ff; }
+
+@media (max-width:1023px){
+  #sidebar{ position:fixed; z-index:50; left:0; top:0; bottom:0; transform:translateX(-105%); transition:transform .25s ease; }
+  #sidebar.open{ transform:none; box-shadow:30px 0 60px rgba(0,0,0,.6); }
+}
+@media (min-width:1024px){ #sidebar{ position:sticky; top:0; height:100vh; } }
+@media (max-width:640px){
+  .tbl-wrap thead{ display:none; }
+  .tbl-wrap table, .tbl-wrap tbody, .tbl-wrap tr, .tbl-wrap td{ display:block; width:100%; }
+  .tbl-wrap tr{ background:#10141d; border:1px solid #20283680; border-radius:14px; margin-bottom:.8rem; padding:.4rem .2rem; }
+  .tbl-wrap td{ border-bottom:none; padding:.45rem .9rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+  .tbl-wrap td::before{ content:attr(data-th); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#6d7688; font-weight:700; }
+}
+
+/* A visibilidade dos espaços é controlada pelo roteador, inclusive no desktop. */
+.hidden{display:none!important}
+#app:not(.hidden){display:flex}
+.role-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.role-choice{text-align:left;display:flex;flex-direction:column;align-items:flex-start;padding:28px;color:inherit;cursor:pointer}
+.role-choice h2{font-size:20px;font-weight:800;margin:18px 0 8px}
+.role-choice p{font-size:14px;color:#8b94a7;line-height:1.7;margin-bottom:24px}
+.role-choice .role-link{margin-top:auto;color:#93c5fd;font-size:14px;font-weight:600}
+.public-question{padding:24px;margin-bottom:16px}
+.public-question legend{font-size:16px;font-weight:600;max-width:100%;overflow-wrap:anywhere}
+.public-option{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #232a38;border-radius:10px;margin-top:8px;cursor:pointer}
+.public-option input{accent-color:#3b82f6;width:18px;height:18px;flex-shrink:0}
+@media(max-width:760px){.role-grid{grid-template-columns:1fr}.role-choice{padding:24px}}
+</style>
+<style>
+body{padding-bottom:76px}
+.noir-credit{position:fixed;right:16px;bottom:14px;z-index:35;display:flex;align-items:center;gap:9px;padding:8px 12px;background:#10131aee;border:1px solid #303744;border-radius:999px;color:#fff;text-decoration:none;font:600 12px Inter,system-ui,sans-serif;box-shadow:0 6px 22px #0005;transition:border-color .2s,transform .2s}
+.noir-credit:hover{border-color:#8b94a7;transform:translateY(-2px)}
+.noir-credit:focus-visible{outline:2px solid #60a5fa;outline-offset:4px}
+.noir-credit img{width:30px;height:30px;border-radius:50%;object-fit:cover}
+#toast-root{bottom:82px}
+@media(max-width:640px){.noir-credit{right:12px;bottom:12px;font-size:11px}}
+</style>
+</head>
+<body class="min-h-screen">
+<a class="noir-credit" href="https://noir-lt.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Made by Noir — visitar o site da Noir"><img src="data:image/jpeg;base64,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" alt="Pantera da Noir" width="30" height="30"><span>Made by <strong>NOIR</strong> ↗</span></a>
+
+<div id="public-screen" class="min-h-screen p-5 md:p-10"><div id="public-content" class="max-w-5xl mx-auto"></div></div>
+
+<!-- ══════════ APLICAÇÃO ══════════ -->
+<div id="app" class="hidden min-h-screen lg:flex">
+  <div id="sidebar-overlay" class="hidden fixed inset-0 z-40 modal-bg lg:hidden"></div>
+  <aside id="sidebar" class="w-[248px] shrink-0 bg-[#0c0f15] border-r border-line flex flex-col">
+    <div class="flex items-center gap-3 px-5 h-16 border-b border-line">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div class="leading-tight">
+        <p class="font-extrabold text-[15px] text-white tracking-tight">QZent</p>
+        <p class="text-[10px] text-muted">Painel Interno</p>
+      </div>
+    </div>
+    <nav id="nav" class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+    <div class="p-3 border-t border-line">
+      <div class="flex items-center gap-3 px-2 py-2">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-sm font-bold text-white shrink-0">E</div>
+        <div class="leading-tight min-w-0">
+          <p class="text-sm font-semibold text-white truncate">Entrevistador</p>
+          <p class="text-[11px] text-muted">Entrevistador</p>
+        </div>
+      </div>
+      <button id="btn-logout" class="nav-item w-full !text-red-400 hover:!bg-red-500/10 mt-1">
+        <svg class="nav-ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+        Sair da conta
+      </button>
+    </div>
+  </aside>
+
+  <div class="flex-1 min-w-0 flex flex-col">
+    <header class="sticky top-0 z-30 h-16 bg-[#0a0c10]/85 backdrop-blur border-b border-line flex items-center gap-3 px-4 md:px-7">
+      <button id="btn-menu" class="btn btn-ghost !p-2 lg:hidden" aria-label="Menu">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="min-w-0">
+        <h1 id="page-title" class="text-base md:text-lg font-bold text-white truncate">Dashboard</h1>
+        <p id="page-sub" class="text-[11px] md:text-xs text-muted truncate hidden sm:block"></p>
+      </div>
+      <div class="flex-1"></div>
+      <div class="hidden md:flex items-center gap-2 text-xs text-muted bg-panel border border-line rounded-full px-3.5 py-1.5">
+        <span class="dot dot-live"></span> Sistema operacional
+      </div>
+      <div class="hidden sm:flex items-center gap-2 text-xs text-muted bg-panel border border-line rounded-full px-3.5 py-1.5 font-medium" id="top-date"></div>
+      <button id="btn-logout-2" class="btn btn-ghost !p-2" title="Sair">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </header>
+    <main id="page" class="flex-1 p-4 md:p-7 max-w-[1400px] w-full mx-auto"></main>
+  </div>
+</div>
+
+<!-- Modais e toasts -->
+<div id="modal-root"></div>
+<div id="toast-root" class="fixed bottom-5 right-5 z-[90] space-y-2.5"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   QZent — Sistema de Questionários e Entrevistas
+   Arquitetura: Utils → Storage → Auth → Services/UI → Pages → Router
+   Persistência: localStorage (camada "Store" isolada, pronta para
+   ser substituída por API/banco real sem tocar nas páginas).
+   ════════════════════════════════════════════════════════════════ */
+'use strict';
+
+/* ─────────────── UTILS ─────────────── */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const nowTime  = () => { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const fmtDate = iso => { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${+d} de ${MESES[+m-1]} de ${y}`; };
+const fmtDateShort = iso => { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
+const fmtDateTime = (iso, t) => (iso ? fmtDate(iso) : '—') + (t ? ', ' + t : '');
+const fmtTimeAgo = ts => { const s = Math.floor((Date.now() - ts) / 1000); if (s < 60) return 'agora mesmo'; const m = Math.floor(s/60); if (m < 60) return m + ' min atrás'; const h = Math.floor(m/60); if (h < 24) return h + ' h atrás'; const d = Math.floor(h/24); if (d === 1) return 'ontem'; if (d < 30) return d + ' dias atrás'; return fmtDateShort(new Date(ts).toISOString().slice(0,10)); };
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+const IC = (p, s = 17) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICONS = {
+  dash: IC('<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'),
+  forms: IC('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>'),
+  mic: IC('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>'),
+  users: IC('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  chart: IC('<path d="M3 3v18h18"/><path d="M7 15v-4M12 17V8M17 13V5"/>'),
+  gear: IC('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+  plus: IC('<path d="M12 5v14M5 12h14"/>', 15),
+  search: IC('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>', 15),
+  trash: IC('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>', 15),
+  copy: IC('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 15),
+  eye: IC('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>', 15),
+  back: IC('<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>', 16),
+  up: IC('<path d="m18 15-6-6-6 6"/>', 15),
+  down: IC('<path d="m6 9 6 6 6-6"/>', 15),
+  check: IC('<path d="M20 6 9 17l-5-5"/>', 16),
+  x: IC('<path d="M18 6 6 18M6 6l12 12"/>', 15),
+  edit: IC('<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>', 15),
+  download: IC('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>', 15),
+  play: IC('<polygon points="6 3 20 12 6 21 6 3" fill="currentColor" stroke="none"/>', 14),
+  file: IC('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15),
+  alert: IC('<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>', 16),
+  clock: IC('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>', 15),
+  door: IC('<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h20"/><path d="M13 4 4 6v14"/><circle cx="10.5" cy="12" r=".5"/>', 15),
+  cal: IC('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', 15),
+};
+
+/* ─────────────── STORAGE (camada isolada) ─────────────── */
+const DB_KEY = 'qzent_db_v1';
+let DB = null;
+
+function loadDB() {
+  try { const raw = localStorage.getItem(DB_KEY); if (raw) { DB = JSON.parse(raw); ensureStudyQuestionnaire(); return; } } catch (e) {}
+  DB = { version: 1, questionnaires: [], interviews: [], purpose: '' };
+  ensureStudyQuestionnaire();
+}
+function ensureStudyQuestionnaire() {
+  const id = 'ia-estudos-turma104';
+  if (DB.questionnaires.some(q => q.id === id)) return;
+  const now = Date.now();
+  DB.questionnaires.push({id, title: 'Inteligência Artificial na rotina de estudos', description: '', status: 'ativo', demo: false, createdAt: now, updatedAt: now, questions: [{"id": "ia-estudos-1", "type": "multi", "text": "Quais ferramentas de Inteligência Artificial você utiliza com mais frequência na sua rotina de estudos?", "required": true, "options": ["ChatGPT", "Gemini", "Copilot", "geradores de resumo", "correctores de texto", "resolvedores de exercícios"]}, {"id": "ia-estudos-2", "type": "single", "text": "Com que frequência você recorre a ferramentas de IA para auxiliar nas suas tarefas acadêmicas?", "required": true, "options": ["Diariamente", "Algumas vezes na semana", "Apenas em períodos de provas", "Raramente", "Nunca"]}, {"id": "ia-estudos-3", "type": "multi", "text": "Para quais finalidades você mais utiliza a inteligência artificial nos estudos?", "required": true, "options": ["Explicar conceitos difíceis", "resumir textos", "estruturar redações", "resolver/verificar exercícios", "criar cronogramas"]}, {"id": "ia-estudos-4", "type": "single", "text": "Em que medida você sente que o uso de IA tem ajudado a otimizar o seu tempo e a sua produtividade escolar?", "required": true, "options": ["Muito", "Moderadamente", "Pouco", "Nada"]}, {"id": "ia-estudos-5", "type": "long", "text": "Quando você utiliza uma IA para resolver uma questão ou elaborar um trabalho, você costuma conferir as informações por conta própria ou aceita o resultado gerado de forma direta?", "required": true, "options": []}]});
+  saveDB();
+}
+
+function saveDB() { try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch (e) { toast('Erro ao salvar dados localmente.', 'error'); } }
+
+/* ─────────────── TIPOS DE PERGUNTA ─────────────── */
+const Q_TYPES = {
+  short:    { label: 'Resposta curta',     hasOptions: false, numeric: false },
+  long:     { label: 'Resposta longa',     hasOptions: false, numeric: false },
+  single:   { label: 'Escolha única',      hasOptions: true,  numeric: false },
+  multi:    { label: 'Múltipla escolha',   hasOptions: true,  numeric: false },
+  yesno:    { label: 'Sim / Não',          hasOptions: false, numeric: false },
+  scale5:   { label: 'Escala de 1 a 5',    hasOptions: false, numeric: true,  min: 1, max: 5 },
+  note10:   { label: 'Nota de 0 a 10',     hasOptions: false, numeric: true,  min: 0, max: 10 },
+  list:     { label: 'Lista de opções',    hasOptions: true,  numeric: false },
+};
+
+/* ─────────────── DADOS DE DEMONSTRAÇÃO ─────────────── */
+function mkQ(type, text, required, options = []) { return { id: uid(), type, text, required, options }; }
+function seedDemo() {
+  const now = Date.now();
+  const qSat = {
+    id: 'demo_q1', demo: true, status: 'ativo', createdAt: now - 86400000 * 12, updatedAt: now - 86400000 * 2,
+    title: 'Pesquisa de Satisfação',
+    description: 'Avaliação geral da experiência dos participantes, aplicada ao final de cada encontro.',
+    questions: [
+      mkQ('short',  'Qual é o seu nome completo?', true),
+      mkQ('single', 'Como você avalia o atendimento recebido?', true, ['Excelente', 'Bom', 'Regular', 'Ruim']),
+      mkQ('scale5', 'De 1 a 5, qual seu nível de satisfação geral?', true),
+      mkQ('multi',  'O que mais chamou sua atenção positivamente?', false, ['Organização', 'Conteúdo', 'Equipe', 'Estrutura', 'Pontualidade']),
+      mkQ('yesno',  'Você recomendaria este serviço a outras pessoas?', true),
+      mkQ('note10', 'De 0 a 10, qual a probabilidade de você voltar?', true),
+      mkQ('long',   'Deixe uma sugestão ou observação (opcional).', false),
+    ],
+  };
+  const qAtend = {
+    id: 'demo_q2', demo: true, status: 'ativo', createdAt: now - 86400000 * 8, updatedAt: now - 86400000 * 1,
+    title: 'Avaliação de Atendimento',
+    description: 'Questionário rápido sobre a qualidade do atendimento realizado nas salas.',
+    questions: [
+      mkQ('short',  'Nome completo', true),
+      mkQ('single', 'O atendimento resolveu sua necessidade?', true, ['Totalmente', 'Parcialmente', 'Não resolveu']),
+      mkQ('scale5', 'Avalie a agilidade do atendimento (1 a 5)', true),
+      mkQ('list',   'Qual sala você esteve?', true, ['101', '102', '103', '104', '105']),
+      mkQ('yesno',  'Foi atendido no horário agendado?', true),
+    ],
+  };
+  const names = ['Maria Silva', 'João Pereira', 'Ana Costa', 'Carlos Souza', 'Fernanda Lima', 'Ricardo Alves', 'Juliana Mendes', 'Pedro Rocha', 'Beatriz Nunes', 'Marcos Vieira', 'Larissa Prado', 'Tiago Ferreira'];
+  const rooms = ['101', '102', '103', '104', '105'];
+  const interviews = [];
+  const ansPool = [
+    { excel: ['Excelente','Bom','Regular','Excelente'], scale: [5,4,5,3,4], note: [9,8,10,7,9], yn: ['Sim','Sim','Não','Sim'] },
+  ];
+  names.forEach((name, i) => {
+    const qq = i % 2 === 0 ? qSat : qAtend;
+    const daysAgo = [0, 0, 1, 2, 3, 4, 5, 6, 8, 9, 11, 13][i];
+    const date = addDays(todayISO(), -daysAgo);
+    const time = String(8 + (i * 53) % 11).padStart(2,'0') + ':' + String((i * 17) % 60).padStart(2,'0');
+    const answers = {};
+    qq.questions.forEach((q, qi) => {
+      const r = (i + qi) % 4;
+      if (q.type === 'short') answers[q.id] = name;
+      else if (q.type === 'single' || q.type === 'list') answers[q.id] = q.options[(i + qi) % q.options.length];
+      else if (q.type === 'multi') answers[q.id] = [q.options[(i + qi) % q.options.length], q.options[(i + qi + 2) % q.options.length]];
+      else if (q.type === 'yesno') answers[q.id] = (i + qi) % 3 === 0 ? 'Não' : 'Sim';
+      else if (q.type === 'scale5') answers[q.id] = 3 + ((i + qi) % 3);
+      else if (q.type === 'note10') answers[q.id] = 6 + ((i * 2 + qi) % 5);
+      else if (q.type === 'long') answers[q.id] = (i + qi) % 2 === 0 ? 'Tudo muito bem organizado, parabéns à equipe.' : '';
+    });
+    interviews.push({ id: 'demo_i' + i, demo: true, personName: name, room: rooms[i % rooms.length], date, time, questionnaireId: qq.id, questionnaireTitle: qq.title, interviewer: 'virginia', obs: i % 3 === 0 ? 'Participou voluntariamente.' : '', createdAt: now - daysAgo * 86400000, answers });
+  });
+  return { version: 1, questionnaires: [qSat, qAtend], interviews, seededAt: now };
+}
+
+/* ─────────────── AUTH (local, preparada p/ backend real) ─────────────── */
+const Auth = {
+  session: null,
+  login(password) {
+    if (password !== '104') return false;
+    this.session = { user: 'Entrevistador', role: 'interviewer' };
+    return true;
+  },
+  current() { return this.session; },
+  logout() {
+    if (editDraft) { saveEditor(true); editDraft = null; }
+    this.session = null;
+    navigate('#/inicio');
+  },
+};
+
+/* ─────────────── TOASTS ─────────────── */
+function toast(msg, type = 'success') {
+  const colors = { success: ['#22c55e', ICONS.check], error: ['#ef4444', ICONS.alert], info: ['#3b82f6', ICONS.alert] };
+  const [color, ico] = colors[type] || colors.info;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span style="color:${color}">${ico}</span><span class="text-slate-200">${esc(msg)}</span>`;
+  $('#toast-root').appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 260); }, 3400);
+}
+
+/* ─────────────── MODAL DE CONFIRMAÇÃO ─────────────── */
+function confirmModal({ title, message, confirmText = 'Confirmar', danger = false }) {
+  return new Promise(resolve => {
+    const root = $('#modal-root');
+    root.innerHTML = `
+      <div class="fixed inset-0 z-[80] modal-bg flex items-center justify-center p-4 fade-in" id="cm-bg">
+        <div class="card w-full max-w-sm p-6">
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${danger ? 'bg-red-500/12 text-red-400' : 'bg-blue-500/12 text-blue-400'}" style="border:1px solid ${danger ? '#ef444440' : '#3b82f640'}">${ICONS.alert}</div>
+          <h3 class="text-base font-bold text-white mb-1.5">${esc(title)}</h3>
+          <p class="text-sm text-muted leading-relaxed mb-5">${esc(message)}</p>
+          <div class="flex gap-2.5 justify-end">
+            <button class="btn btn-ghost" id="cm-no">Cancelar</button>
+            <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="cm-yes">${esc(confirmText)}</button>
+          </div>
+        </div>
+      </div>`;
+    const close = v => { root.innerHTML = ''; resolve(v); };
+    $('#cm-no').onclick = () => close(false);
+    $('#cm-bg').onclick = e => { if (e.target.id === 'cm-bg') close(false); };
+    $('#cm-yes').onclick = () => close(true);
+  });
+}
+
+/* ─────────────── ESTADO AUXILIAR DE UI ─────────────── */
+let charts = {};
+function destroyCharts() { Object.values(charts).forEach(c => { try { c.destroy(); } catch (e) {} }); charts = {}; }
+function chartDefaults() {
+  Chart.defaults.color = '#8b94a7';
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+  Chart.defaults.font.size = 11;
+  Chart.defaults.borderColor = '#1f2634';
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.plugins.legend.labels.boxHeight = 12;
+  Chart.defaults.plugins.tooltip.backgroundColor = '#161c28';
+  Chart.defaults.plugins.tooltip.borderColor = '#2a3448';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.titleColor = '#fff';
+}
+const BLUE_SHADES = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#2563eb', '#7db3fb', '#a5c8fc', '#0ea5e9'];
+</script>
+
+<script>
+/* ═══════════════ SERVICES (regras de negócio) ═══════════════ */
+const Service = {
+  qIndex: id => DB.questionnaires.findIndex(q => q.id === id),
+  qGet: id => DB.questionnaires.find(q => q.id === id),
+  interviewsOf: qid => DB.interviews.filter(i => i.questionnaireId === qid),
+  rooms() { return [...new Set(DB.interviews.map(i => i.room).filter(Boolean))].sort(); },
+  answersCount() { return DB.interviews.reduce((n, i) => n + Object.keys(i.answers).length, 0); },
+  saveQuestionnaire(qq) { qq.updatedAt = Date.now(); saveDB(); },
+  deleteQuestionnaire(id) {
+    DB.questionnaires = DB.questionnaires.filter(q => q.id !== id);
+    DB.interviews = DB.interviews.filter(i => i.questionnaireId !== id);
+    saveDB();
+  },
+  duplicateQuestionnaire(id) {
+    const src = this.qGet(id); if (!src) return null;
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.id = uid(); copy.title = src.title + ' (cópia)'; copy.createdAt = Date.now(); copy.updatedAt = Date.now(); copy.demo = false;
+    copy.questions.forEach(q => q.id = uid());
+    DB.questionnaires.unshift(copy); saveDB(); return copy;
+  },
+  deleteInterview(id) { DB.interviews = DB.interviews.filter(i => i.id !== id); saveDB(); },
+  clearDemo() {
+    DB.interviews = DB.interviews.filter(i => !i.demo);
+    const usedIds = new Set(DB.interviews.map(i => i.questionnaireId));
+    DB.questionnaires = DB.questionnaires.filter(q => !q.demo || usedIds.has(q.id)).map(q => ({ ...q, demo: false }));
+    saveDB();
+  },
+  resetAll() { localStorage.removeItem(DB_KEY); DB = seedDemo(); saveDB(); },
+  exportCSV() {
+    const rows = [];
+    const header = ['Entrevistado', 'Sala', 'Questionário', 'Data', 'Horário', 'Entrevistador', 'Observação'];
+    const qIds = DB.questionnaires.map(q => q.id);
+    rows.push(header.join(','));
+    DB.interviews.forEach(iv => {
+      const base = [iv.personName, iv.room, iv.questionnaireTitle, iv.date, iv.time, iv.interviewer || '', (iv.obs || '').replace(/\n/g, ' ')]
+        .map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',');
+      rows.push(base);
+    });
+    return rows.join('\n');
+  },
+};
+
+/* ═══════════════ UI HELPERS ═══════════════ */
+function pageHead(title, sub, crumbs = '') {
+  return `<div class="mb-6 fade-in">
+    ${crumbs ? `<div class="text-xs text-muted mb-1.5 flex items-center gap-1.5">${crumbs}</div>` : ''}
+    <h2 class="text-xl md:text-2xl font-extrabold text-white tracking-tight">${title}</h2>
+    ${sub ? `<p class="text-sm text-muted mt-1">${sub}</p>` : ''}
+  </div>`;
+}
+function emptyState(icon, title, sub, action = '') {
+  return `<div class="card p-10 md:p-14 flex flex-col items-center text-center fade-in">
+    <div class="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4" style="border:1px solid #3b82f630">${icon}</div>
+    <h3 class="text-base font-bold text-white mb-1">${title}</h3>
+    <p class="text-sm text-muted max-w-sm mb-5">${sub}</p>${action}
+  </div>`;
+}
+function kpiCard(icon, label, value, hint, accent = '#3b82f6') {
+  return `<div class="card card-hover p-5 flex items-start gap-4">
+    <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style="background:${accent}1c;color:${accent};border:1px solid ${accent}38">${icon}</div>
+    <div class="min-w-0">
+      <p class="text-xs font-semibold text-muted uppercase tracking-wide">${label}</p>
+      <p class="text-2xl md:text-[26px] font-extrabold text-white leading-tight mt-0.5">${value}</p>
+      <p class="text-[11px] text-muted/80 mt-1 truncate">${hint}</p>
+    </div>
+  </div>`;
+}
+function skeletonCards(n = 4) {
+  return `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">${Array.from({ length: n }).map(() => '<div class="skeleton h-[104px]"></div>').join('')}</div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="skeleton h-[300px]"></div><div class="skeleton h-[300px]"></div></div>`;
+}
+
+/* ═══════════════ ROTEADOR ═══════════════ */
+const NAV = [
+  { hash: '#/dashboard',     label: 'Dashboard',       icon: 'dash'  },
+  { hash: '#/questionarios', label: 'Questionários',   icon: 'forms' },
+  { hash: '#/nova-entrevista', label: 'Nova entrevista', icon: 'mic' },
+  { hash: '#/entrevistados', label: 'Entrevistados',   icon: 'users' },
+  { hash: '#/resultados',    label: 'Resultados',      icon: 'chart' },
+  { hash: '#/finalidade-editor', label: 'Finalidade do site', icon: 'forms' },
+  { hash: '#/inicio', label: 'Página inicial', icon: 'back' },
+  { hash: '#/config',        label: 'Configurações',   icon: 'gear'  },
+];
+const TITLES = {
+  '#/dashboard': ['Dashboard', 'Visão geral das entrevistas e indicadores'],
+  '#/questionarios': ['Questionários', 'Crie, edite e gerencie seus questionários'],
+  '#/nova-entrevista': ['Nova entrevista', 'Inicie um novo atendimento de questionário'],
+  '#/entrevistados': ['Entrevistados', 'Histórico completo de pessoas entrevistadas'],
+  '#/resultados': ['Resultados', 'Análise e distribuição das respostas'],
+  '#/config': ['Configurações', 'Preferências, exportação e manutenção'],
+};
+
+function renderNav(activeHash = location.hash) {
+  $('#nav').innerHTML = NAV.map(n => `
+    <div class="nav-item ${activeHash.startsWith(n.hash) || (n.hash === '#/questionarios' && activeHash.startsWith('#/editor')) ? 'active' : ''}" data-nav="${n.hash}">
+      <span class="nav-ico">${ICONS[n.icon]}</span>${n.label}
+    </div>`).join('');
+  $$('#nav .nav-item').forEach(el => el.onclick = () => { navigate(el.dataset.nav); closeSidebar(); });
+}
+function closeSidebar() { $('#sidebar').classList.remove('open'); $('#sidebar-overlay').classList.add('hidden'); }
+function openSidebar()  { $('#sidebar').classList.add('open'); $('#sidebar-overlay').classList.remove('hidden'); }
+
+function route(requestedHash) {
+  destroyCharts();
+  closeSidebar();
+  const h = (typeof requestedHash === 'string' ? requestedHash : location.hash) || '#/inicio';
+  if (editDraft && Auth.current() && !h.startsWith('#/editor/')) { saveEditor(true); editDraft = null; }
+  if (['#/inicio','#/entrevistado','#/finalidade','#/entrevistador'].includes(h) || h.startsWith('#/responder/')) return publicRoute(h);
+  if (!Auth.current()) return renderInterviewerLogin();
+  showSpace('app');
+  renderNav(h);
+  const key = Object.keys(TITLES).find(k => h.startsWith(k)) || '#/dashboard';
+  const [t, s] = TITLES[key];
+  $('#page-title').textContent = t;
+  $('#page-sub').textContent = s;
+  const d = new Date();
+  $('#top-date').innerHTML = `${ICONS.cal} ${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
+  window.scrollTo({ top: 0 });
+  $('#page').innerHTML = '';
+
+  if (h.startsWith('#/editor/')) { $('#page-title').textContent = 'Editor de questionário'; $('#page-sub').textContent = 'Monte as perguntas e configure o formulário'; return pageEditor(h.split('/')[2]); }
+  if (h.startsWith('#/exec/'))   { $('#page-title').textContent = 'Realizando entrevista'; $('#page-sub').textContent = 'Registro das respostas em andamento'; return pageRunner(h.split('/')[2]); }
+  if (h === '#/questionarios')     return pageQuestionarios();
+  if (h === '#/nova-entrevista')   return pageNovaEntrevista();
+  if (h === '#/entrevistados')     return pageEntrevistados();
+  if (h === '#/resultados')        return pageResultados();
+  if (h === '#/finalidade-editor') return pagePurposeEditor();
+  if (h === '#/config')            return pageConfig();
+  return pageDashboard();
+}
+
+/* ═══════════════ PÁGINA: DASHBOARD ═══════════════ */
+function pageDashboard() {
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const el = $('#page');
+  el.innerHTML = `
+    ${pageHead(`${greet}, entrevistador`, 'Aqui está o resumo das entrevistas realizadas no sistema.')}
+    <div id="dash-body">${skeletonCards()}</div>`;
+  setTimeout(() => { // skeleton → dados reais
+    const ivs = DB.interviews;
+    const today = todayISO();
+    const todayCount = ivs.filter(i => i.date === today).length;
+    const realCount = ivs.filter(i => !i.demo).length;
+    const perDay = {}, perRoom = {};
+    ivs.forEach(i => { perDay[i.date] = (perDay[i.date] || 0) + 1; perRoom[i.room] = (perRoom[i.room] || 0) + 1; });
+    const days = [...Array(14)].map((_, k) => addDays(today, -(13 - k)));
+    const dayCounts = days.map(d => perDay[d] || 0);
+    let cumulative = 0;
+    const evol = dayCounts.map(c => (cumulative += c));
+
+    if (!Auth.current() || !el.querySelector('#dash-body')) return;
+    el.querySelector('#dash-body').innerHTML = `
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6 fade-in">
+        ${kpiCard(ICONS.users, 'Entrevistados', ivs.length, realCount ? `${realCount} reais · ${ivs.length - realCount} de demonstração` : 'registros no histórico', '#3b82f6')}
+        ${kpiCard(ICONS.forms, 'Questionários', DB.questionnaires.length, DB.questionnaires.filter(q => q.status === 'ativo').length + ' ativos', '#60a5fa')}
+        ${kpiCard(ICONS.check, 'Total de respostas', Service.answersCount(), 'perguntas respondidas', '#22c55e')}
+        ${kpiCard(ICONS.clock, 'Entrevistas hoje', todayCount, todayCount === 0 ? 'nenhuma registrada ainda' : 'registradas em ' + fmtDateShort(today), '#f59e0b')}
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card p-5"><div class="flex items-center justify-between mb-4"><h3 class="font-bold text-white text-sm">Entrevistas por dia</h3><span class="badge badge-blue">14 dias</span></div><div class="h-[260px]"><canvas id="ch-day"></canvas></div></div>
+        <div class="card p-5"><div class="flex items-center justify-between mb-4"><h3 class="font-bold text-white text-sm">Entrevistados por sala</h3><span class="badge badge-blue">distribuição</span></div><div class="h-[260px]"><canvas id="ch-room"></canvas></div></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card p-5"><div class="flex items-center justify-between mb-4"><h3 class="font-bold text-white text-sm">Distribuição das respostas</h3><span class="badge badge-blue">escolhas</span></div><div class="h-[260px]"><canvas id="ch-dist"></canvas></div></div>
+        <div class="card p-5"><div class="flex items-center justify-between mb-4"><h3 class="font-bold text-white text-sm">Evolução das entrevistas</h3><span class="badge badge-blue">acumulado</span></div><div class="h-[260px]"><canvas id="ch-evol"></canvas></div></div>
+      </div>`;
+
+    charts.day = new Chart($('#ch-day'), { type: 'bar',
+      data: { labels: days.map(d => d.slice(8) + '/' + d.slice(5, 7)), datasets: [{ data: dayCounts, backgroundColor: dayCounts.map((_, i) => i === 13 ? '#60a5fa' : '#2563eb99'), borderRadius: 6, maxBarThickness: 26 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+    charts.room = new Chart($('#ch-room'), { type: 'doughnut',
+      data: { labels: Object.keys(perRoom).sort(), datasets: [{ data: Object.keys(perRoom).sort().map(r => perRoom[r]), backgroundColor: BLUE_SHADES, borderColor: '#0f131b', borderWidth: 3 }] },
+      options: { maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'right' } } } });
+    const dist = {};
+    ivs.forEach(i => Object.entries(i.answers).forEach(([qid, v]) => {
+      const q = (Service.qGet(i.questionnaireId) || { questions: [] }).questions.find(x => x.id === qid);
+      if (!q || !Q_TYPES[q.type].hasOptions) return;
+      (Array.isArray(v) ? v : [v]).forEach(val => { if (val) dist[val] = (dist[val] || 0) + 1; });
+    }));
+    const dKeys = Object.keys(dist).sort((a, b) => dist[b] - dist[a]).slice(0, 8);
+    charts.dist = new Chart($('#ch-dist'), { type: 'bar',
+      data: { labels: dKeys.length ? dKeys : ['Sem dados'], datasets: [{ data: dKeys.length ? dKeys.map(k => dist[k]) : [0], backgroundColor: BLUE_SHADES, borderRadius: 6, maxBarThickness: 22 }] },
+      options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
+    charts.evol = new Chart($('#ch-evol'), { type: 'line',
+      data: { labels: days.map(d => d.slice(8) + '/' + d.slice(5, 7)), datasets: [{ data: evol, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.12)', fill: true, tension: .4, pointRadius: 3, pointBackgroundColor: '#60a5fa' }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+  }, 500);
+}
+
+/* ═══════════════ PÁGINA: QUESTIONÁRIOS ═══════════════ */
+function pageQuestionarios() {
+  const el = $('#page');
+  el.innerHTML = `
+    ${pageHead('Questionários', `${DB.questionnaires.length} questionário(s) cadastrado(s) · ${DB.interviews.length} entrevista(s) vinculada(s)`)}
+    <div class="flex flex-col sm:flex-row gap-3 mb-5 fade-in">
+      <div class="relative flex-1 max-w-md">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted">${ICONS.search}</span>
+        <input id="q-search" class="input !pl-10" placeholder="Pesquisar questionário..."/>
+      </div>
+      <div class="flex-1"></div>
+      <button id="q-new" class="btn btn-primary">${ICONS.plus} Novo questionário</button>
+    </div>
+    <div id="q-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>`;
+
+  const renderList = () => {
+    const term = ($('#q-search').value || '').toLowerCase();
+    const list = DB.questionnaires.filter(q => q.title.toLowerCase().includes(term) || (q.description || '').toLowerCase().includes(term));
+    const box = $('#q-list');
+    if (!list.length) {
+      box.innerHTML = emptyState(ICONS.forms, 'Nenhum questionário encontrado', term ? 'Tente ajustar a pesquisa ou crie um novo questionário.' : 'Comece criando o seu primeiro questionário.', `<button class="btn btn-primary" onclick="location.hash='#/editor/novo'">${ICONS.plus} Criar questionário</button>`);
+      return;
+    }
+    box.innerHTML = list.map(q => {
+      const nResp = Service.interviewsOf(q.id).length;
+      return `<div class="card card-hover p-5 flex flex-col fade-in">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-white truncate">${esc(q.title)}</h3>
+            <p class="text-xs text-muted mt-1 line-clamp-2">${esc(q.description || 'Sem descrição')}</p>
+          </div>
+          <span class="badge ${q.status === 'ativo' ? 'badge-green' : 'badge-gray'} shrink-0">${q.status === 'ativo' ? 'Ativo' : 'Inativo'}</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mb-4">
+          ${q.demo ? '<span class="badge badge-amber">Demo</span>' : ''}
+          <span class="badge badge-gray">${q.questions.length} pergunta(s)</span>
+          <span class="badge badge-blue">${nResp} resposta(s)</span>
+        </div>
+        <div class="text-[11px] text-muted space-y-0.5 mb-4">
+          <p>Criado em ${fmtDateShort(new Date(q.createdAt).toISOString().slice(0,10))}</p>
+          <p>Atualizado ${fmtTimeAgo(q.updatedAt)}</p>
+        </div>
+        <div class="flex items-center gap-2 mt-auto pt-3 border-t border-line">
+          <button class="btn btn-ghost !px-3 !py-2" data-act="edit" data-id="${q.id}" title="Editar">${ICONS.edit}</button>
+          <button class="btn btn-ghost !px-3 !py-2" data-act="dup" data-id="${q.id}" title="Duplicar">${ICONS.copy}</button>
+          <button class="btn btn-ghost !px-3 !py-2" data-act="toggle" data-id="${q.id}" title="${q.status === 'ativo' ? 'Desativar' : 'Ativar'}">${q.status === 'ativo' ? ICONS.x : ICONS.check}</button>
+          <button class="btn btn-danger !px-3 !py-2 ml-auto" data-act="del" data-id="${q.id}" title="Excluir">${ICONS.trash}</button>
+        </div>
+      </div>`;
+    }).join('');
+    box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => qAction(b.dataset.act, b.dataset.id));
+  };
+
+  const qAction = async (act, id) => {
+    const q = Service.qGet(id); if (!q) return;
+    if (act === 'edit') location.hash = '#/editor/' + id;
+    if (act === 'dup') { const c = Service.duplicateQuestionnaire(id); toast('Questionário duplicado.'); renderList(); if (c) setTimeout(() => location.hash = '#/editor/' + c.id, 300); }
+    if (act === 'toggle') { q.status = q.status === 'ativo' ? 'inativo' : 'ativo'; Service.saveQuestionnaire(q); toast(q.status === 'ativo' ? 'Questionário ativado.' : 'Questionário desativado.'); renderList(); }
+    if (act === 'del') {
+      const n = Service.interviewsOf(id).length;
+      const ok = await confirmModal({ title: 'Excluir questionário?', message: `"${q.title}" será excluído permanentemente${n ? ` junto com ${n} entrevista(s) vinculada(s)` : ''}. Esta ação não pode ser desfeita.`, confirmText: 'Excluir', danger: true });
+      if (ok) { Service.deleteQuestionnaire(id); toast('Questionário excluído.', 'success'); renderList(); }
+    }
+  };
+  $('#q-new').onclick = () => location.hash = '#/editor/novo';
+  $('#q-search').oninput = debounce(renderList, 180);
+  renderList();
+}
+</script>
+
+<script>
+/* ═══════════════ PÁGINA: EDITOR DE QUESTIONÁRIO ═══════════════ */
+let editDraft = null, editQid = null, autoSaveT = null;
+
+function pageEditor(id) {
+  if (id === 'novo') {
+    const qq = { id: uid(), title: 'Novo questionário', description: '', status: 'ativo', createdAt: Date.now(), updatedAt: Date.now(), demo: false, questions: [] };
+    DB.questionnaires.unshift(qq); saveDB(); editQid = qq.id; editDraft = JSON.parse(JSON.stringify(qq));
+  } else {
+    const src = Service.qGet(id);
+    if (!src) { toast('Questionário não encontrado.', 'error'); location.hash = '#/questionarios'; return; }
+    editQid = id; editDraft = JSON.parse(JSON.stringify(src));
+  }
+  renderEditor();
+}
+
+function renderEditor() {
+  const d = editDraft;
+  const el = $('#page');
+  el.innerHTML = `
+    ${pageHead(esc(d.title), esc(d.description || 'Editor de perguntas e configurações'), `<span class="hover:text-white cursor-pointer" onclick="location.hash='#/questionarios'">Questionários</span> <span class="text-slate-600">/</span> <span class="text-slate-400">${editQid === 'novo' || DB.questionnaires.find(q=>q.id===editQid)?.demo ? 'Editor' : 'Editor'}</span>`)}
+    <div class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5 items-start">
+      <div class="card p-5 lg:sticky lg:top-24">
+        <h3 class="font-bold text-white text-sm mb-4">Configurações</h3>
+        <div class="mb-4"><label class="lbl">Título</label><input id="ed-title" class="input" value="${esc(d.title)}" maxlength="120"/></div>
+        <div class="mb-4"><label class="lbl">Descrição</label><textarea id="ed-desc" class="input" rows="3" maxlength="400" placeholder="Descreva o objetivo do questionário...">${esc(d.description)}</textarea></div>
+        <div class="mb-4"><label class="lbl">Status</label>
+          <select id="ed-status" class="input"><option value="ativo" ${d.status==='ativo'?'selected':''}>Ativo</option><option value="inativo" ${d.status==='inativo'?'selected':''}>Inativo</option></select>
+        </div>
+        <div class="border-t border-line pt-4 space-y-2 text-xs text-muted">
+          <p class="flex justify-between"><span>Perguntas</span><strong class="text-white">${d.questions.length}</strong></p>
+          <p class="flex justify-between"><span>Criado em</span><strong class="text-white">${fmtDateShort(new Date(d.createdAt).toISOString().slice(0,10))}</strong></p>
+          <p class="flex justify-between"><span>Respostas vinculadas</span><strong class="text-white">${Service.interviewsOf(d.id).length}</strong></p>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm text-muted"><strong class="text-white">${d.questions.length}</strong> pergunta(s) · <span id="ed-savestate" class="text-emerald-400 font-medium">Salvo</span></p>
+          <button class="btn btn-primary" id="ed-save">${ICONS.check} Salvar alterações</button>
+        </div>
+        <div id="ed-list" class="space-y-3 mb-4"></div>
+        <button id="ed-add" class="btn btn-ghost w-full !py-3.5 border-dashed" style="border-style:dashed">${ICONS.plus} Adicionar pergunta</button>
+      </div>
+    </div>`;
+  renderQList();
+
+  const scheduleSave = () => { $('#ed-savestate').textContent = 'Salvando...'; clearTimeout(autoSaveT); autoSaveT = setTimeout(() => saveEditor(true), 900); };
+  const updMeta = () => { d.title = $('#ed-title').value; d.description = $('#ed-desc').value; d.status = $('#ed-status').value; scheduleSave(); };
+  ['#ed-title', '#ed-desc', '#ed-status'].forEach(s => $(s).oninput = updMeta);
+  $('#ed-save').onclick = () => { saveEditor(false); toast('Questionário salvo com sucesso.'); };
+  $('#ed-add').onclick = () => { d.questions.push({ id: uid(), type: 'short', text: '', required: false, options: [] }); renderQList(); scheduleSave(); setTimeout(() => { const cards = $$('#ed-list .q-card'); cards[cards.length-1]?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); };
+}
+
+function renderQList() {
+  const d = editDraft;
+  const list = $('#ed-list');
+  if (!d.questions.length) {
+    list.innerHTML = `<div class="card p-8 text-center text-sm text-muted">Nenhuma pergunta ainda. Clique em <strong class="text-white">Adicionar pergunta</strong> para começar a montar o questionário.</div>`;
+    return;
+  }
+  list.innerHTML = d.questions.map((q, i) => {
+    const t = Q_TYPES[q.type];
+    return `<div class="q-card p-4 md:p-5" data-qid="${q.id}">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-500/12 text-blue-400 flex items-center justify-center text-xs font-extrabold shrink-0" style="border:1px solid #3b82f636">${i + 1}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-col sm:flex-row gap-2.5 mb-3">
+            <input class="input flex-1 ed-qtext" data-qid="${q.id}" value="${esc(q.text)}" placeholder="Digite a pergunta..." maxlength="300"/>
+            <select class="input sm:w-[190px] ed-qtype" data-qid="${q.id}">
+              ${Object.entries(Q_TYPES).map(([k, v]) => `<option value="${k}" ${q.type === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+            </select>
+          </div>
+          ${t.hasOptions ? `<div class="mb-3 ed-opts" data-qid="${q.id}">
+            <p class="text-[11px] font-bold text-muted uppercase mb-2">Alternativas</p>
+            <div class="space-y-2">${(q.options.length ? q.options : ['']).map((op, oi) => `
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-md bg-panel2 border border-line flex items-center justify-center text-[10px] font-bold text-muted shrink-0">${oi + 1}</span>
+                <input class="input !py-2 ed-opt" data-qid="${q.id}" data-oi="${oi}" value="${esc(op)}" placeholder="Alternativa ${oi + 1}"/>
+                <button class="btn btn-danger !p-2 ed-optdel" data-qid="${q.id}" data-oi="${oi}" ${q.options.length < 2 ? 'disabled' : ''}>${ICONS.x}</button>
+              </div>`).join('')}
+            </div>
+            <button class="btn btn-ghost !py-1.5 !px-3 mt-2 text-xs ed-optadd" data-qid="${q.id}">${ICONS.plus} Alternativa</button>
+          </div>` : ''}
+          ${q.type === 'scale5' || q.type === 'note10' ? `<p class="text-[11px] text-muted mb-3">Resposta em escala numérica de <strong class="text-white">${t.min}</strong> a <strong class="text-white">${t.max}</strong>.</p>` : ''}
+          <div class="flex items-center gap-2 flex-wrap">
+            <label class="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
+              <input type="checkbox" class="accent-blue-500 w-4 h-4 ed-req" data-qid="${q.id}" ${q.required ? 'checked' : ''}/> Obrigatória
+            </label>
+            <div class="flex-1"></div>
+            <button class="btn btn-ghost !p-2 ed-move" data-qid="${q.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''} title="Mover para cima">${ICONS.up}</button>
+            <button class="btn btn-ghost !p-2 ed-move" data-qid="${q.id}" data-dir="1" ${i === d.questions.length - 1 ? 'disabled' : ''} title="Mover para baixo">${ICONS.down}</button>
+            <button class="btn btn-ghost !p-2 ed-dupq" data-qid="${q.id}" title="Duplicar pergunta">${ICONS.copy}</button>
+            <button class="btn btn-danger !p-2 ed-delq" data-qid="${q.id}" title="Excluir pergunta">${ICONS.trash}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const scheduleSave = () => { $('#ed-savestate').textContent = 'Salvando...'; clearTimeout(autoSaveT); autoSaveT = setTimeout(() => saveEditor(true), 900); };
+  const qOf = id => editDraft.questions.find(x => x.id === id);
+
+  list.querySelectorAll('.ed-qtext').forEach(inp => inp.oninput = () => { qOf(inp.dataset.qid).text = inp.value; scheduleSave(); });
+  list.querySelectorAll('.ed-qtype').forEach(sel => sel.onchange = () => { const q = qOf(sel.dataset.qid); q.type = sel.value; if (Q_TYPES[q.type].hasOptions && !q.options.length) q.options = ['Opção 1', 'Opção 2']; renderQList(); scheduleSave(); });
+  list.querySelectorAll('.ed-req').forEach(cb => cb.onchange = () => { qOf(cb.dataset.qid).required = cb.checked; scheduleSave(); });
+  list.querySelectorAll('.ed-opt').forEach(inp => inp.oninput = () => { qOf(inp.dataset.qid).options[+inp.dataset.oi] = inp.value; scheduleSave(); });
+  list.querySelectorAll('.ed-optadd').forEach(b => b.onclick = () => { qOf(b.dataset.qid).options.push(''); renderQList(); scheduleSave(); });
+  list.querySelectorAll('.ed-optdel').forEach(b => b.onclick = () => { const q = qOf(b.dataset.qid); q.options.splice(+b.dataset.oi, 1); if (!q.options.length) q.options = ['']; renderQList(); scheduleSave(); });
+  list.querySelectorAll('.ed-move').forEach(b => b.onclick = () => {
+    const q = qOf(b.dataset.qid); const i = editDraft.questions.indexOf(q); const j = i + (+b.dataset.dir);
+    if (j < 0 || j >= editDraft.questions.length) return;
+    [editDraft.questions[i], editDraft.questions[j]] = [editDraft.questions[j], editDraft.questions[i]];
+    renderQList(); scheduleSave();
+  });
+  list.querySelectorAll('.ed-dupq').forEach(b => b.onclick = () => {
+    const q = qOf(b.dataset.qid); const i = editDraft.questions.indexOf(q);
+    editDraft.questions.splice(i + 1, 0, { ...JSON.parse(JSON.stringify(q)), id: uid(), options: [...q.options] });
+    renderQList(); scheduleSave();
+  });
+  list.querySelectorAll('.ed-delq').forEach(b => b.onclick = async () => {
+    const q = qOf(b.dataset.qid);
+    if (await confirmModal({ title: 'Excluir pergunta?', message: `"${q.text || 'Pergunta sem texto'}" será removida do questionário.`, confirmText: 'Excluir', danger: true })) {
+      editDraft.questions = editDraft.questions.filter(x => x.id !== q.id); renderQList(); scheduleSave();
+    }
+  });
+}
+
+function saveEditor(silent) {
+  clearTimeout(autoSaveT);
+  const i = Service.qIndex(editQid);
+  if (i >= 0) { editDraft.updatedAt = Date.now(); DB.questionnaires[i] = JSON.parse(JSON.stringify(editDraft)); saveDB(); }
+  const st = $('#ed-savestate'); if (st) st.textContent = 'Salvo';
+  if (!silent) $('#page-title').textContent = editDraft.title || 'Questionário';
+}
+
+/* ═══════════════ PÁGINA: NOVA ENTREVISTA ═══════════════ */
+function pageNovaEntrevista() {
+  const actives = DB.questionnaires.filter(q => q.status === 'ativo');
+  const el = $('#page');
+  if (!actives.length) {
+    el.innerHTML = emptyState(ICONS.mic, 'Nenhum questionário ativo', 'Ative ou crie um questionário antes de iniciar uma entrevista.', `<button class="btn btn-primary" onclick="location.hash='#/questionarios'">${ICONS.forms} Ir para Questionários</button>`);
+    return;
+  }
+  el.innerHTML = `
+    ${pageHead('Nova entrevista', 'Preencha os dados da pessoa entrevistada antes de começar.')}
+    <div class="max-w-2xl card p-6 md:p-8 fade-in">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2"><label class="lbl" for="ne-name">Nome do entrevistado (opcional)</label><input id="ne-name" class="input" placeholder="Pode deixar em branco" maxlength="120"/></div>
+        <div><label class="lbl">Sala *</label><input id="ne-room" class="input" list="rooms-list" placeholder="Ex.: 104"/><datalist id="rooms-list">${Service.rooms().map(r => `<option value="${esc(r)}">`).join('')}</datalist><p class="hidden text-xs text-red-400 mt-1" id="ne-room-err">Informe a sala.</p></div>
+        <div><label class="lbl">Questionário *</label>
+          <select id="ne-q" class="input"><option value="">Selecionar...</option>${actives.map(q => `<option value="${q.id}">${esc(q.title)} (${q.questions.length} perguntas)</option>`).join('')}</select>
+          <p class="hidden text-xs text-red-400 mt-1" id="ne-q-err">Selecione um questionário.</p>
+        </div>
+        <div><label class="lbl">Data *</label><input id="ne-date" type="date" class="input" value="${todayISO()}"/></div>
+        <div><label class="lbl">Horário *</label><input id="ne-time" type="time" class="input" value="${nowTime()}"/></div>
+        <div><label class="lbl" for="ne-interviewer">Seu nome (entrevistador) *</label><input id="ne-interviewer" class="input" placeholder="Digite seu nome" maxlength="80" autocomplete="name" required aria-describedby="ne-interviewer-err"/><p class="hidden text-xs text-red-400 mt-1" id="ne-interviewer-err">Informe seu nome para iniciar a entrevista.</p></div>
+        <div class="sm:col-span-2"><label class="lbl">Observação</label><textarea id="ne-obs" class="input" rows="2" placeholder="Anotações sobre o atendimento (opcional)..." maxlength="500"></textarea></div>
+      </div>
+      <div class="flex flex-col-reverse sm:flex-row gap-3 mt-7">
+        <button class="btn btn-ghost" onclick="location.hash='#/dashboard'">${ICONS.back} Voltar</button>
+        <button class="btn btn-primary flex-1 !py-3" id="ne-start">${ICONS.play} Começar entrevista</button>
+      </div>
+    </div>`;
+
+  $('#ne-start').onclick = () => {
+    let ok = true;
+    const check = (id, cond) => { const bad = !cond; $(id).classList.toggle('hidden', !bad); $(id.replace('-err', '')).classList.toggle('err', bad); if (bad) ok = false; };
+    check('#ne-room-err', $('#ne-room').value.trim().length > 0);
+    check('#ne-q-err', !!$('#ne-q').value);
+    check('#ne-interviewer-err', $('#ne-interviewer').value.trim().length >= 2);
+    if (!ok) { toast('Preencha os campos obrigatórios.', 'error'); return; }
+    const session = {
+      personName: $('#ne-name').value.trim() || 'Não informado', room: $('#ne-room').value.trim(),
+      date: $('#ne-date').value || todayISO(), time: $('#ne-time').value || nowTime(),
+      questionnaireId: $('#ne-q').value, interviewer: $('#ne-interviewer').value.trim(),
+      obs: $('#ne-obs').value.trim(), answers: {}, idx: 0,
+    };
+    sessionStorage.setItem('qzent_session_run', JSON.stringify(session));
+    navigate('#/exec/' + session.questionnaireId);
+  };
+}
+
+/* ═══════════════ PÁGINA: EXECUÇÃO DO QUESTIONÁRIO ═══════════════ */
+function pageRunner(qid) {
+  const session = JSON.parse(sessionStorage.getItem('qzent_session_run') || 'null');
+  const qq = Service.qGet(qid);
+  const el = $('#page');
+  if (!session || !qq) { el.innerHTML = emptyState(ICONS.alert, 'Sessão de entrevista não encontrada', 'Inicie uma nova entrevista para responder um questionário.', `<button class="btn btn-primary" onclick="location.hash='#/nova-entrevista'">${ICONS.mic} Nova entrevista</button>`); return; }
+
+  const total = qq.questions.length;
+  const i = session.idx;
+
+  if (i >= total) return runnerFinish(session, qq);
+
+  const q = qq.questions[i];
+  const val = session.answers[q.id];
+  const progress = Math.round((i / total) * 100);
+
+  el.innerHTML = `
+    <div class="max-w-2xl mx-auto fade-in">
+      <div class="card p-5 mb-5 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-blue-500/12 text-blue-400 flex items-center justify-center shrink-0" style="border:1px solid #3b82f636">${ICONS.users}</div>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-white truncate">${esc(session.personName)}</p>
+          <p class="text-xs text-muted truncate">${esc(qq.title)} · Sala ${esc(session.room)} · ${fmtDateTime(session.date, session.time)}</p>
+        </div>
+        <span class="badge badge-blue shrink-0">${i + 1} / ${total}</span>
+      </div>
+      <div class="mb-6">
+        <div class="flex justify-between text-xs font-semibold text-muted mb-2"><span>Progresso</span><span class="text-blue-400">${progress}%</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
+      </div>
+      <div class="card p-6 md:p-8">
+        <div class="flex items-start gap-3 mb-6">
+          <div class="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-sm font-extrabold shrink-0">${i + 1}</div>
+          <div>
+            <p class="text-[11px] font-bold text-blue-400 uppercase tracking-wide mb-1">${Q_TYPES[q.type].label}${q.required ? ' · obrigatória' : ''}</p>
+            <h3 class="text-lg md:text-xl font-bold text-white leading-snug">${esc(q.text)}</h3>
+          </div>
+        </div>
+        <div id="ans-area"></div>
+        <p id="ans-err" class="hidden text-sm text-red-400 font-medium mt-4 flex items-center gap-1.5">${ICONS.alert} Esta pergunta é obrigatória. Responda para continuar.</p>
+      </div>
+      <div class="flex items-center gap-3 mt-6">
+        <button class="btn btn-ghost" id="run-prev" ${i === 0 ? 'disabled' : ''}>${ICONS.back} Anterior</button>
+        <div class="flex-1"></div>
+        ${i < total - 1
+          ? `<button class="btn btn-primary min-w-[150px]" id="run-next">Próxima</button>`
+          : `<button class="btn btn-primary min-w-[170px]" id="run-finish">${ICONS.check} Finalizar entrevista</button>`}
+      </div>
+    </div>`;
+
+  buildAnswerInput(q, val);
+
+  const collect = () => {
+    const area = $('#ans-area');
+    let v = null;
+    if (q.type === 'short' || q.type === 'long') v = area.querySelector('input,textarea').value.trim();
+    else if (q.type === 'single' || q.type === 'list') { const s = area.querySelector('.opt-chip.sel'); v = s ? s.dataset.val : null; }
+    else if (q.type === 'multi') { const sel = [...area.querySelectorAll('.opt-chip.sel')].map(c => c.dataset.val); v = sel.length ? sel : null; }
+    else if (q.type === 'yesno') { const s = area.querySelector('.opt-chip.sel'); v = s ? s.dataset.val : null; }
+    else if (q.type === 'scale5' || q.type === 'note10') { const s = area.querySelector('.scale-num.sel'); v = s ? +s.dataset.val : null; }
+    return v;
+  };
+  const guard = () => {
+    const v = collect();
+    if (q.required && (v === null || v === '' || (Array.isArray(v) && !v.length))) { $('#ans-err').classList.remove('hidden'); return null; }
+    session.answers[q.id] = v ?? (Array.isArray(v) ? [] : (typeof v === 'number' ? null : ''));
+    sessionStorage.setItem('qzent_session_run', JSON.stringify(session));
+    return true;
+  };
+  $('#run-prev').onclick = () => { session.answers[q.id] = collect() ?? ''; sessionStorage.setItem('qzent_session_run', JSON.stringify(session)); session.idx = i - 1; sessionStorage.setItem('qzent_session_run', JSON.stringify(session)); route(); };
+  const next = $('#run-next'); if (next) next.onclick = () => { if (guard() !== null) { session.idx = i + 1; sessionStorage.setItem('qzent_session_run', JSON.stringify(session)); route(); } };
+  const fin = $('#run-finish'); if (fin) fin.onclick = async () => {
+    if (guard() !== null) {
+      const ok = await confirmModal({ title: 'Finalizar entrevista?', message: `As respostas de ${session.personName} serão salvas e associadas à sala ${session.room}.`, confirmText: 'Finalizar e salvar' });
+      if (ok) runnerFinish(session, qq, true);
+    }
+  };
+}
+
+function buildAnswerInput(q, val) {
+  const area = $('#ans-area');
+  const t = Q_TYPES[q.type];
+  let html = '';
+  if (q.type === 'short') html = `<input class="input !py-3" id="a-in" placeholder="Digite sua resposta..." value="${esc(val || '')}" maxlength="200"/>`;
+  else if (q.type === 'long') html = `<textarea class="input" id="a-in" rows="4" placeholder="Digite sua resposta detalhada..." maxlength="2000">${esc(val || '')}</textarea>`;
+  else if (q.type === 'single' || q.type === 'list') html = `<div class="space-y-2.5">${q.options.map(o => `<div class="opt-chip ${val === o ? 'sel' : ''}" data-val="${esc(o)}"><span class="w-4.5 h-4.5 w-[18px] h-[18px] rounded-full border-2 ${val === o ? 'border-blue-500' : 'border-slate-600'} flex items-center justify-center shrink-0">${val === o ? '<span class="w-2 h-2 rounded-full bg-blue-500"></span>' : ''}</span><span class="text-slate-200">${esc(o)}</span></div>`).join('')}</div>`;
+  else if (q.type === 'multi') html = `<div class="space-y-2.5">${q.options.map(o => { const on = Array.isArray(val) && val.includes(o); return `<div class="opt-chip ${on ? 'sel' : ''}" data-val="${esc(o)}"><span class="w-[18px] h-[18px] rounded-md border-2 ${on ? 'border-blue-500 bg-blue-500' : 'border-slate-600'} flex items-center justify-center shrink-0 text-white">${on ? ICONS.check : ''}</span><span class="text-slate-200">${esc(o)}</span></div>`; }).join('')}<p class="text-[11px] text-muted pt-1">Selecione uma ou mais opções.</p></div>`;
+  else if (q.type === 'yesno') html = `<div class="grid grid-cols-2 gap-3 max-w-sm">${['Sim', 'Não'].map(o => `<div class="opt-chip !py-3.5 justify-center font-bold ${val === o ? 'sel' : ''}" data-val="${o}">${o}</div>`).join('')}</div>`;
+  else if (q.type === 'scale5' || q.type === 'note10') html = `<div class="flex flex-wrap gap-2.5">${Array.from({ length: t.max - t.min + 1 }).map((_, k) => { const n = t.min + k; return `<button type="button" class="scale-num ${val === n ? 'sel' : ''}" data-val="${n}">${n}</button>`; }).join('')}</div><p class="text-[11px] text-muted mt-3">${t.min} = mínimo · ${t.max} = máximo</p>`;
+  area.innerHTML = html;
+  area.querySelectorAll('.opt-chip').forEach(c => c.onclick = () => {
+    if (q.type === 'multi') c.classList.toggle('sel');
+    else { area.querySelectorAll('.opt-chip').forEach(x => x.classList.remove('sel')); c.classList.add('sel'); }
+  });
+  area.querySelectorAll('.scale-num').forEach(b => b.onclick = () => { area.querySelectorAll('.scale-num').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
+  const inp = area.querySelector('input,textarea'); if (inp) setTimeout(() => inp.focus(), 80);
+}
+
+function runnerFinish(session, qq, save) {
+  const el = $('#page');
+  if (save) {
+    DB.interviews.push({
+      id: uid(), personName: session.personName, room: session.room,
+      date: session.date, time: session.time, questionnaireId: qq.id,
+      questionnaireTitle: qq.title, interviewer: session.interviewer, obs: session.obs,
+      createdAt: Date.now(), demo: false, answers: session.answers,
+    });
+    saveDB();
+  }
+  sessionStorage.removeItem('qzent_session_run');
+  el.innerHTML = `
+    <div class="max-w-lg mx-auto card p-10 text-center fade-in">
+      <div class="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-5" style="background:linear-gradient(135deg,#16a34a,#4ade80); box-shadow:0 12px 32px -10px rgba(34,197,94,.6)">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h2 class="text-xl font-extrabold text-white mb-2">Entrevista concluída com sucesso.</h2>
+      <p class="text-sm text-muted mb-1">${esc(session.personName)} · Sala ${esc(session.room)}</p>
+      <p class="text-sm text-muted mb-7">${esc(qq.title)} · ${fmtDateTime(session.date, session.time)} · ${Object.keys(session.answers).length} respostas registradas</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <button class="btn btn-ghost" onclick="location.hash='#/entrevistados'">Ver histórico</button>
+        <button class="btn btn-ghost" onclick="location.hash='#/dashboard'">Dashboard</button>
+        <button class="btn btn-primary" onclick="location.hash='#/nova-entrevista'">${ICONS.plus} Nova entrevista</button>
+      </div>
+    </div>`;
+  toast('Entrevista salva no histórico.');
+}
+</script>
+
+<script>
+/* ═══════════════ PÁGINA: ENTREVISTADOS ═══════════════ */
+function pageEntrevistados() {
+  const el = $('#page');
+  el.innerHTML = `
+    ${pageHead('Entrevistados', 'Histórico completo — os dados permanecem salvos mesmo após sair.')}
+    <div class="card p-4 mb-5 fade-in">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div class="relative sm:col-span-2">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted">${ICONS.search}</span>
+          <input id="f-search" class="input !pl-10" placeholder="Pesquisar entrevistado..."/>
+        </div>
+        <select id="f-room" class="input"><option value="">Todas as salas</option>${Service.rooms().map(r => `<option>${esc(r)}</option>`).join('')}</select>
+        <select id="f-q" class="input"><option value="">Todos os questionários</option>${DB.questionnaires.map(q => `<option value="${q.id}">${esc(q.title)}</option>`).join('')}</select>
+        <select id="f-period" class="input">
+          <option value="all">Todas as entrevistas</option>
+          <option value="0">Hoje</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="30">Últimos 30 dias</option>
+        </select>
+      </div>
+    </div>
+    <div id="iv-wrap"></div>`;
+
+  const filtered = () => {
+    const term = ($('#f-search').value || '').toLowerCase();
+    const room = $('#f-room').value, qid = $('#f-q').value, per = $('#f-period').value;
+    const min = per === 'all' ? null : addDays(todayISO(), -parseInt(per));
+    return DB.interviews
+      .filter(i => i.personName.toLowerCase().includes(term))
+      .filter(i => !room || i.room === room)
+      .filter(i => !qid || i.questionnaireId === qid)
+      .filter(i => !min || i.date >= min)
+      .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+  };
+
+  const render = () => {
+    const list = filtered();
+    const wrap = $('#iv-wrap');
+    if (!list.length) {
+      wrap.innerHTML = emptyState(ICONS.users, 'Nenhum entrevistado encontrado', 'Ajuste os filtros ou realize uma nova entrevista para ver registros aqui.', `<button class="btn btn-primary" onclick="location.hash='#/nova-entrevista'">${ICONS.mic} Nova entrevista</button>`);
+      return;
+    }
+    wrap.innerHTML = `
+      <p class="text-xs text-muted mb-3 fade-in">${list.length} registro(s) encontrado(s)</p>
+      <div class="card overflow-hidden tbl-wrap fade-in">
+        <table class="tbl">
+          <thead><tr><th>Nome</th><th>Sala</th><th>Questionário</th><th>Data</th><th>Horário</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
+          <tbody>${list.map(i => `
+            <tr>
+              <td data-th="Nome" class="!font-semibold text-white">${esc(i.personName)} ${i.demo ? '<span class="badge badge-amber ml-1">Demo</span>' : ''}</td>
+              <td data-th="Sala"><span class="badge badge-gray">${esc(i.room)}</span></td>
+              <td data-th="Questionário" class="max-w-[220px] truncate">${esc(i.questionnaireTitle)}</td>
+              <td data-th="Data">${fmtDateShort(i.date)}</td>
+              <td data-th="Horário">${i.time}</td>
+              <td data-th="Status"><span class="badge badge-green"><span class="dot" style="background:#4ade80"></span>Concluída</span></td>
+              <td data-th="Ações"><div class="flex gap-2 justify-end">
+                <button class="btn btn-ghost !p-2" data-view="${i.id}" title="Visualizar entrevista">${ICONS.eye}</button>
+                <button class="btn btn-danger !p-2" data-del="${i.id}" title="Excluir registro">${ICONS.trash}</button>
+              </div></td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>`;
+    wrap.querySelectorAll('[data-view]').forEach(b => b.onclick = () => viewInterview(b.dataset.view));
+    wrap.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      const iv = DB.interviews.find(x => x.id === b.dataset.del);
+      if (await confirmModal({ title: 'Excluir registro?', message: `A entrevista de ${iv.personName} (${fmtDateShort(iv.date)}) será removida permanentemente.`, confirmText: 'Excluir', danger: true })) {
+        Service.deleteInterview(iv.id); toast('Registro excluído.'); render();
+      }
+    });
+  };
+
+  ['#f-search', '#f-room', '#f-q', '#f-period'].forEach(s => { $(s).oninput = debounce(render, 180); $(s).onchange = debounce(render, 100); });
+  render();
+}
+
+function viewInterview(id) {
+  const iv = DB.interviews.find(x => x.id === id); if (!iv) return;
+  const qq = Service.qGet(iv.questionnaireId);
+  const fmtAns = (q, v) => {
+    if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return '<span class="text-muted italic">Sem resposta</span>';
+    if (Array.isArray(v)) return v.map(x => `<span class="badge badge-blue mr-1">${esc(x)}</span>`).join('');
+    if (typeof v === 'number') return `<span class="font-mono font-bold text-blue-400 text-base">${v}</span>`;
+    return esc(v);
+  };
+  const rows = (qq ? qq.questions : []).map((q, i) => `
+    <div class="py-3.5 border-b border-line last:border-0">
+      <p class="text-sm font-semibold text-white mb-1.5">${i + 1}. ${esc(q.text)}</p>
+      <div class="text-sm pl-5">${fmtAns(q, iv.answers[q.id])}</div>
+    </div>`).join('');
+  $('#modal-root').innerHTML = `
+    <div class="fixed inset-0 z-[80] modal-bg flex items-center justify-center p-4 fade-in" id="vi-bg">
+      <div class="card w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+        <div class="flex items-start justify-between gap-4 p-5 border-b border-line">
+          <div>
+            <h3 class="text-lg font-bold text-white">${esc(iv.personName)} ${iv.demo ? '<span class="badge badge-amber ml-1">Demo</span>' : ''}</h3>
+            <p class="text-xs text-muted mt-1">Sala ${esc(iv.room)} · ${fmtDateTime(iv.date, iv.time)} · ${esc(iv.questionnaireTitle)}</p>
+            ${iv.interviewer ? `<p class="text-xs text-muted mt-0.5">Entrevistador(a): ${esc(iv.interviewer)}</p>` : ''}
+          </div>
+          <button class="btn btn-ghost !p-2" id="vi-close">${ICONS.x}</button>
+        </div>
+        <div class="p-5 overflow-y-auto flex-1">
+          ${rows || '<p class="text-sm text-muted">O questionário vinculado não foi encontrado.</p>'}
+          ${iv.obs ? `<div class="mt-4 p-3.5 rounded-xl bg-amber-500/8 border border-amber-500/25"><p class="text-[11px] font-bold text-amber-400 uppercase mb-1">Observação</p><p class="text-sm text-slate-300">${esc(iv.obs)}</p></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  $('#vi-close').onclick = () => $('#modal-root').innerHTML = '';
+  $('#vi-bg').onclick = e => { if (e.target.id === 'vi-bg') $('#modal-root').innerHTML = ''; };
+}
+
+/* ═══════════════ PÁGINA: RESULTADOS ═══════════════ */
+function pageResultados() {
+  const el = $('#page');
+  el.innerHTML = `
+    ${pageHead('Resultados', 'Análise das respostas com base nas entrevistas realizadas.')}
+    <div class="card p-4 mb-5 fade-in">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <select id="r-q" class="input"><option value="">Todos os questionários</option>${DB.questionnaires.map(q => `<option value="${q.id}">${esc(q.title)}</option>`).join('')}</select>
+        <select id="r-room" class="input"><option value="">Todas as salas</option>${Service.rooms().map(r => `<option>${esc(r)}</option>`).join('')}</select>
+        <select id="r-period" class="input"><option value="all">Todo o período</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select>
+        <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted">${ICONS.search}</span><input id="r-name" class="input !pl-10" placeholder="Filtrar por entrevistado..."/></div>
+      </div>
+    </div>
+    <div id="r-body">${skeletonCards(3)}</div>`;
+
+  const render = () => {
+    destroyCharts();
+    const qid = $('#r-q').value, room = $('#r-room').value, per = $('#r-period').value;
+    const name = ($('#r-name').value || '').toLowerCase();
+    const min = per === 'all' ? null : addDays(todayISO(), -parseInt(per));
+    let list = DB.interviews.filter(i => (!qid || i.questionnaireId === qid) && (!room || i.room === room) && (!min || i.date >= min) && i.personName.toLowerCase().includes(name));
+    const body = $('#r-body');
+
+    if (!list.length) {
+      body.innerHTML = emptyState(ICONS.chart, 'Sem dados para os filtros selecionados', 'Realize entrevistas ou ajuste os filtros para visualizar os resultados.');
+      return;
+    }
+
+    // métricas agregadas por pergunta
+    const perQ = {};
+    list.forEach(iv => {
+      const qq = Service.qGet(iv.questionnaireId); if (!qq) return;
+      qq.questions.forEach(q => {
+        const v = iv.answers[q.id];
+        perQ[q.id] = perQ[q.id] || { q, numeric: [], count: 0, dist: {} };
+        const slot = perQ[q.id];
+        if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return;
+        slot.count++;
+        if (Q_TYPES[q.type].numeric && typeof v === 'number') slot.numeric.push(v);
+        else (Array.isArray(v) ? v : [v]).forEach(x => { if (x) slot.dist[x] = (slot.dist[x] || 0) + 1; });
+      });
+    });
+
+    const numericAvgs = Object.values(perQ).filter(s => s.numeric.length);
+    const overallAvg = numericAvgs.length ? (numericAvgs.reduce((a, s) => a + s.numeric.reduce((x, y) => x + y, 0) / s.numeric.length, 0) / numericAvgs.length) : null;
+    const roomAgg = {};
+    list.forEach(i => { roomAgg[i.room] = (roomAgg[i.room] || 0) + 1; });
+    const roomKeys = Object.keys(roomAgg).sort();
+
+    const choiceSlots = Object.values(perQ).filter(s => Q_TYPES[s.q.type].hasOptions && Object.keys(s.dist).length);
+    let topQ = null, topV = null, topN = 0;
+    choiceSlots.forEach(s => Object.entries(s.dist).forEach(([v, n]) => { if (n > topN) { topN = n; topQ = s.q; topV = v; } }));
+
+    body.innerHTML = `
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 fade-in">
+        ${kpiCard(ICONS.mic, 'Total de entrevistas', list.length, 'nos filtros atuais', '#3b82f6')}
+        ${kpiCard(ICONS.chart, 'Média geral', overallAvg !== null ? overallAvg.toFixed(1).replace('.', ',') : '—', overallAvg !== null ? 'das respostas numéricas' : 'sem respostas numéricas', '#22c55e')}
+        ${kpiCard(ICONS.check, 'Resposta mais frequente', topV ? `${esc(topV)} <span class="text-xs font-semibold text-muted">(${topN}×)</span>` : '—', topQ ? esc(topQ.text) : 'sem escolhas suficientes', '#f59e0b')}
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card p-5"><h3 class="font-bold text-white text-sm mb-4">Comparação entre salas</h3><div class="h-[250px]"><canvas id="rc-room"></canvas></div></div>
+        <div class="card p-5"><h3 class="font-bold text-white text-sm mb-4">Evolução no período</h3><div class="h-[250px]"><canvas id="rc-evol"></canvas></div></div>
+      </div>
+      <div class="card p-5 mb-4"><h3 class="font-bold text-white text-sm mb-4">Média por pergunta numérica</h3><div class="h-[240px]"><canvas id="rc-avg"></canvas></div></div>
+      ${choiceSlots.length ? `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${choiceSlots.slice(0, 4).map((s, k) => `
+        <div class="card p-5"><h3 class="font-bold text-white text-sm mb-1 truncate" title="${esc(s.q.text)}">${esc(s.q.text)}</h3>
+        <p class="text-[11px] text-muted mb-4">${s.count} resposta(s)</p><div class="h-[210px]"><canvas id="rc-c${k}"></canvas></div></div>`).join('')}</div>` : ''}`;
+
+    charts.cr = new Chart($('#rc-room'), { type: 'bar',
+      data: { labels: roomKeys, datasets: [{ data: roomKeys.map(r => roomAgg[r]), backgroundColor: '#2563ebbb', borderRadius: 8, maxBarThickness: 44 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+    const days = [...Array(14)].map((_, k) => addDays(todayISO(), -(13 - k)));
+    const pd = {}; list.forEach(i => pd[i.date] = (pd[i.date] || 0) + 1);
+    charts.ce = new Chart($('#rc-evol'), { type: 'line',
+      data: { labels: days.map(d => d.slice(8) + '/' + d.slice(5, 7)), datasets: [{ data: days.map(d => pd[d] || 0), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.12)', fill: true, tension: .4, pointRadius: 3, pointBackgroundColor: '#60a5fa' }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+    const nLabels = numericAvgs.map((s, k) => 'P' + (Object.values(perQ).indexOf(s) + 1));
+    const nVals = numericAvgs.map(s => +(s.numeric.reduce((a, b) => a + b, 0) / s.numeric.length).toFixed(2));
+    charts.ca = new Chart($('#rc-avg'), { type: 'bar',
+      data: { labels: nLabels, datasets: [{ data: nVals, backgroundColor: nVals.map(v => v >= (overallAvg || 0) ? '#22c55ecc' : '#f59e0bcc'), borderRadius: 8, maxBarThickness: 44 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => { const s = numericAvgs[items[0].dataIndex]; return s.q.text; } } } }, scales: { y: { beginAtZero: true } } } });
+    choiceSlots.slice(0, 4).forEach((s, k) => {
+      const keys = Object.keys(s.dist).sort((a, b) => s.dist[b] - s.dist[a]);
+      charts['cc' + k] = new Chart($('#rc-c' + k), { type: 'doughnut',
+        data: { labels: keys, datasets: [{ data: keys.map(x => s.dist[x]), backgroundColor: BLUE_SHADES, borderColor: '#0f131b', borderWidth: 3 }] },
+        options: { maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: 'right' } } } });
+    });
+  };
+  ['#r-q', '#r-room', '#r-period', '#r-name'].forEach(s => { $(s).onchange = debounce(render, 150); $(s).oninput = debounce(render, 250); });
+  setTimeout(render, 450);
+}
+
+/* ═══════════════ PÁGINA: CONFIGURAÇÕES ═══════════════ */
+function pageConfig() {
+  const el = $('#page');
+  const demoIvs = DB.interviews.filter(i => i.demo).length;
+  const kb = Math.round((localStorage.getItem(DB_KEY) || '').length / 1024 * 10) / 10;
+  el.innerHTML = `
+    ${pageHead('Configurações', 'Preferências do sistema, exportação e manutenção dos dados.')}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="card p-6">
+        <h3 class="font-bold text-white text-sm mb-1">Conta e sessão</h3>
+        <p class="text-xs text-muted mb-5">Autenticação local — arquitetura preparada para login real com backend.</p>
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center font-bold text-white">E</div>
+          <div><p class="font-bold text-white">Entrevistador</p><p class="text-xs text-muted">Entrevistador · sessão local</p></div>
+        </div>
+        <div class="space-y-2 text-xs text-muted mb-5">
+          <p class="flex justify-between"><span>Armazenamento local</span><strong class="text-white">${kb} KB</strong></p>
+          <p class="flex justify-between"><span>Questionários</span><strong class="text-white">${DB.questionnaires.length}</strong></p>
+          <p class="flex justify-between"><span>Entrevistas</span><strong class="text-white">${DB.interviews.length}</strong></p>
+          <p class="flex justify-between"><span>Dados de demonstração</span><strong class="text-amber-400">${demoIvs} entrevista(s)</strong></p>
+        </div>
+        <button class="btn btn-ghost w-full" id="cf-logout">${ICONS.back} Encerrar sessão</button>
+      </div>
+      <div class="card p-6">
+        <h3 class="font-bold text-white text-sm mb-1">Exportar dados</h3>
+        <p class="text-xs text-muted mb-5">Estrutura preparada para múltiplos formatos.</p>
+        <div class="space-y-2.5">
+          <button class="btn btn-primary w-full justify-start" id="ex-csv">${ICONS.download} Exportar CSV <span class="ml-auto text-[10px] font-bold bg-white/20 rounded px-1.5 py-0.5">PRONTO</span></button>
+          <button class="btn btn-ghost w-full justify-start" data-soon="Excel (.xlsx)">${ICONS.file} Exportar Excel <span class="ml-auto text-[10px] font-bold rounded px-1.5 py-0.5 bg-panel2 border border-line text-muted">EM BREVE</span></button>
+          <button class="btn btn-ghost w-full justify-start" data-soon="PDF">${ICONS.file} Exportar PDF <span class="ml-auto text-[10px] font-bold rounded px-1.5 py-0.5 bg-panel2 border border-line text-muted">EM BREVE</span></button>
+        </div>
+        <p class="text-[11px] text-muted mt-4 leading-relaxed">O CSV inclui todos os registros do histórico (entrevistado, sala, questionário, data, horário, entrevistador e observação).</p>
+      </div>
+      <div class="card p-6 border-red-500/20" style="border-color:#ef444430">
+        <h3 class="font-bold text-red-400 text-sm mb-1">Zona de manutenção</h3>
+        <p class="text-xs text-muted mb-5">Ações irreversíveis sobre os dados armazenados.</p>
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <button class="btn btn-ghost flex-1" id="cf-cleardemo" ${demoIvs ? '' : 'disabled'}>${ICONS.trash} Remover dados de demonstração</button>
+          <button class="btn btn-danger flex-1" id="cf-reset">${ICONS.alert} Restaurar dados de exemplo</button>
+        </div>
+        <p class="text-[11px] text-muted mt-4 leading-relaxed">Os dados reais cadastrados por você nunca são misturados com os demonstrativos — estes são identificados com a etiqueta <span class="badge badge-amber">Demo</span> em todo o sistema.</p>
+      </div>
+      <div class="card p-6">
+        <h3 class="font-bold text-white text-sm mb-1">Sobre o QZent</h3>
+        <p class="text-xs text-muted mb-4">Sistema interno de questionários e entrevistas · v1.0</p>
+        <div class="space-y-2 text-xs text-muted">
+          <p class="flex items-center gap-2"><span class="dot" style="background:#3b82f6"></span> Front-end em componentes modulares (Utils · Store · Auth · Services · Pages)</p>
+          <p class="flex items-center gap-2"><span class="dot" style="background:#22c55e"></span> Persistência local com camada isolada, pronta para API/banco</p>
+          <p class="flex items-center gap-2"><span class="dot" style="background:#f59e0b"></span> Autenticação local substituível por login real seguro</p>
+          <p class="flex items-center gap-2"><span class="dot" style="background:#8b5cf6"></span> Exportação preparada: CSV implementado · Excel/PDF planejados</p>
+        </div>
+      </div>
+    </div>`;
+
+  $('#cf-logout').onclick = () => Auth.logout();
+  $('#ex-csv').onclick = () => {
+    const blob = new Blob(['﻿' + Service.exportCSV()], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'qzent_entrevistas_' + todayISO() + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+    toast('CSV exportado com sucesso.');
+  };
+  $$('[data-soon]').forEach(b => b.onclick = () => toast(`Exportação ${b.dataset.soon} em breve — estrutura já preparada.`, 'info'));
+  $('#cf-cleardemo').onclick = async () => {
+    if (await confirmModal({ title: 'Remover dados de demonstração?', message: `${demoIvs} entrevista(s) e questionários não utilizados de exemplo serão removidos. Seus dados reais serão mantidos.`, confirmText: 'Remover demo' })) {
+      Service.clearDemo(); toast('Dados de demonstração removidos.'); pageConfig();
+    }
+  };
+  $('#cf-reset').onclick = async () => {
+    if (await confirmModal({ title: 'Restaurar dados de exemplo?', message: 'Todos os dados atuais (reais e demonstrativos) serão substituídos pelos dados de exemplo originais.', confirmText: 'Restaurar', danger: true })) {
+      Service.resetAll(); toast('Sistema restaurado com dados de exemplo.'); route();
+    }
+  };
+}
+
+
+/* ═══════════════ ESCOLHA DE ACESSO E FORMULÁRIO PÚBLICO ═══════════════ */
+function showSpace(id) {
+  ['app','public-screen'].forEach(name => document.getElementById(name).classList.toggle('hidden', name !== id));
+}
+function publicHeader(title, subtitle) {
+  return `<div class="mb-7"><a href="#/inicio" class="btn btn-ghost mb-6">${ICONS.back} Início</a><p class="text-blue-400 text-sm font-bold mb-2">QZent · Questionários &amp; Entrevistas</p><h1 class="text-2xl md:text-3xl font-extrabold text-white">${esc(title)}</h1><p class="text-muted mt-3 text-sm leading-relaxed">${esc(subtitle)}</p></div>`;
+}
+function publishedQuestionnaires() {
+  return DB.questionnaires.filter(q => !q.demo && q.status === 'ativo' && q.questions.length && q.questions.every(item => item.text.trim() && Q_TYPES[item.type] && (!Q_TYPES[item.type].hasOptions || (item.options.length && item.options.every(o => o.trim())))));
+}
+function renderInterviewerLogin() {
+  showSpace('public-screen');
+  $('#public-content').innerHTML = `<div class="max-w-md mx-auto py-6 md:py-12">${publicHeader('Sou entrevistador', 'Digite a senha para acessar o painel.')}<div id="interviewer-login" class="card p-6 md:p-8"><label for="access-password" class="lbl">Senha</label><input id="access-password" class="input" type="password" inputmode="numeric" autocomplete="off" aria-describedby="access-error" placeholder="Digite a senha"><p id="access-error" class="text-red-400 text-sm mt-3 hidden" role="alert" aria-live="polite"></p><button type="button" id="access-submit" class="btn btn-primary w-full mt-5 !py-3">Entrar no painel</button></div></div>`;
+  const input = $('#access-password'), error = $('#access-error');
+  const attemptLogin = () => {
+    if (!Auth.login(input.value)) {
+      error.textContent = input.value ? 'Senha incorreta. Tente novamente.' : 'Digite a senha para entrar.';
+      error.classList.remove('hidden');
+      input.focus();
+      return;
+    }
+    showSpace('app');
+    route('#/dashboard');
+  };
+  $('#access-submit').onclick = attemptLogin;
+  input.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); attemptLogin(); } };
+  input.oninput = () => { error.textContent = ''; error.classList.add('hidden'); };
+  input.focus();
+}
+function publicRoute(h) {
+  if (h === '#/entrevistador') return Auth.current() ? enterApp() : renderInterviewerLogin();
+  showSpace('public-screen');
+  const root = $('#public-content');
+  if (h === '#/entrevistado') {
+    const questionnaires = publishedQuestionnaires();
+    root.innerHTML = publicHeader('Sou entrevistado', 'Escolha o formulário disponibilizado pelo entrevistador. Você não precisa de senha.') + (questionnaires.length ? `<div class="grid gap-4">${questionnaires.map(q => `<article class="card p-6"><h2 class="text-lg font-bold">${esc(q.title)}</h2><p class="text-muted text-sm mt-2 whitespace-pre-wrap">${esc(q.description)}</p><p class="text-xs text-blue-400 my-4">${q.questions.length} pergunta(s)</p><a class="btn btn-primary" href="#/responder/${encodeURIComponent(q.id)}">Responder formulário</a><a class="btn btn-ghost mt-3 sm:ml-2" href="#/responder/${encodeURIComponent(q.id)}?anonimo=1">Responder anonimamente</a></article>`).join('')}</div>` : emptyState(ICONS.forms, 'Perguntas ainda não disponíveis', 'O entrevistador está preparando o questionário. Volte quando as perguntas forem adicionadas.'));
+    return;
+  }
+  if (h.startsWith('#/responder/')) {
+    const [encodedId, query = ''] = h.slice('#/responder/'.length).split('?');
+    let id; try { id = decodeURIComponent(encodedId); } catch (_) { id = ''; }
+    return renderPublicForm(id, query === 'anonimo=1');
+  }
+  if (h === '#/finalidade') {
+    root.innerHTML = publicHeader('Finalidade do site', 'Conheça o objetivo deste projeto.') + `<article class="card p-6 md:p-8"><p class="text-slate-200 leading-relaxed whitespace-pre-wrap">${esc(DB.purpose?.trim() || 'A descrição da finalidade do site será adicionada em breve.')}</p></article>`;
+    return;
+  }
+  root.innerHTML = `<div class="py-8 md:py-14"><span class="badge badge-blue">Questionários &amp; Entrevistas</span><h1 class="text-4xl md:text-5xl font-extrabold text-white mt-5 tracking-tight">Bem-vindo ao QZent</h1><p class="text-muted mt-4 mb-9 leading-relaxed">Escolha como deseja acessar o site.</p><div class="role-grid">
+    <a href="#/entrevistador" class="card card-hover role-choice"><span class="text-blue-400">${ICONS.mic}</span><h2>1. Sou entrevistador</h2><p>Adicione perguntas, gerencie questionários e acompanhe as respostas em seu painel.</p><span class="role-link">Acessar com senha →</span></a>
+    <a href="#/entrevistado" class="card card-hover role-choice"><span class="text-blue-400">${ICONS.users}</span><h2>2. Sou entrevistado</h2><p>Responda às perguntas com identificação ou escolha o modo anônimo.</p><span class="role-link">Responder sem senha →</span></a>
+    <a href="#/finalidade" class="card card-hover role-choice"><span class="text-blue-400">${ICONS.forms}</span><h2>3. Finalidade do site</h2><p>Saiba qual é o objetivo do projeto e das entrevistas.</p><span class="role-link">Conhecer a finalidade →</span></a>
+  </div><p class="text-xs text-muted mt-7">Nesta versão, perguntas e respostas ficam salvas somente neste navegador.</p></div>`;
+}
+function publicQuestionInput(q, index) {
+  const name = 'answer-' + index;
+  const required = q.required ? 'required' : '';
+  if (q.type === 'short') return `<input aria-label="Sua resposta" class="input mt-3" name="${name}" maxlength="200" ${required}>`;
+  if (q.type === 'long') return `<textarea aria-label="Sua resposta" class="input mt-3" name="${name}" rows="4" maxlength="2000" ${required}></textarea>`;
+  if (q.type === 'list') return `<select aria-label="Sua resposta" class="input mt-3" name="${name}" ${required}><option value="">Selecione uma opção</option>${q.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`;
+  let options = q.options;
+  if (q.type === 'yesno') options = ['Sim','Não'];
+  if (Q_TYPES[q.type].numeric) options = Array.from({length: Q_TYPES[q.type].max - Q_TYPES[q.type].min + 1}, (_, n) => String(Q_TYPES[q.type].min + n));
+  return options.map(o => `<label class="public-option"><input type="${q.type === 'multi' ? 'checkbox' : 'radio'}" name="${name}" value="${esc(o)}" ${q.type === 'multi' ? '' : required}><span>${esc(o)}</span></label>`).join('');
+}
+function renderPublicForm(id, anonymous = false) {
+  const qq = publishedQuestionnaires().find(q => q.id === id);
+  const root = $('#public-content');
+  if (!qq) { root.innerHTML = publicHeader('Formulário indisponível', 'As perguntas ainda não foram publicadas ou este formulário foi desativado.'); return; }
+  root.innerHTML = `<div class="max-w-2xl mx-auto">${publicHeader(qq.title, qq.description || (anonymous ? 'Responda às perguntas sem informar nome ou sala.' : 'Preencha seus dados e responda às perguntas abaixo.'))}<p class="text-xs text-muted mb-5">* Campos obrigatórios. As respostas ficam salvas neste navegador.</p><form id="respondent-form">${anonymous ? '<div class="badge badge-blue mb-5">Modo anônimo · sem nome e sala</div>' : `<div class="card public-question border-t-4 border-blue-500"><label for="respondent-name" class="lbl">Nome do entrevistado (opcional)</label><input id="respondent-name" name="personName" class="input mb-4" maxlength="120" autocomplete="name" placeholder="Pode deixar em branco"><label for="respondent-room" class="lbl">Sala *</label><input id="respondent-room" name="room" class="input" required maxlength="80" placeholder="Ex.: 104"></div><button type="button" id="switch-anonymous" class="btn btn-ghost w-full mb-5">Prefiro responder anonimamente</button>`}${qq.questions.map((q, index) => `<fieldset class="card public-question" data-question="${index}"><legend>${index+1}. ${esc(q.text)} ${q.required ? '<span class="text-red-400">*</span>' : ''}</legend>${publicQuestionInput(q,index)}</fieldset>`).join('')}<p id="public-form-error" class="text-red-400 text-sm mb-4" role="alert"></p><button class="btn btn-primary w-full !py-3" type="submit">Enviar respostas</button><a href="#/entrevistado" class="btn btn-ghost w-full mt-3">Voltar aos formulários</a></form></div>`;
+  const anonymousButton = $('#switch-anonymous');
+  if (anonymousButton && !anonymous) anonymousButton.onclick = () => navigate('#/responder/' + encodeURIComponent(id) + '?anonimo=1');
+  $('#respondent-form').onsubmit = e => {
+    e.preventDefault();
+    const form = e.currentTarget, data = new FormData(form), answers = {};
+    const error = $('#public-form-error'); error.textContent = '';
+    if (!anonymous && !String(data.get('room') || '').trim()) { error.textContent = 'Informe sua sala.'; return; }
+    const current = publishedQuestionnaires().find(q => q.id === id);
+    if (!current || current.updatedAt !== qq.updatedAt) { error.textContent = 'Este formulário foi alterado. Reabra-o para responder à versão atual.'; return; }
+    for (let index = 0; index < qq.questions.length; index++) {
+      const q = qq.questions[index];
+      let value = q.type === 'multi' ? data.getAll('answer-' + index) : (data.get('answer-' + index) || '').trim();
+      if (q.required && (Array.isArray(value) ? !value.length : value === '')) {
+        error.textContent = `Responda à pergunta ${index+1} antes de enviar.`;
+        const input = form.querySelector(`[data-question="${index}"] input`); input?.focus(); return;
+      }
+      if (Q_TYPES[q.type].numeric && value !== '') value = Number(value);
+      answers[q.id] = value;
+    }
+    const record = { id: uid(), demo: false, anonymous, personName: anonymous ? 'Anônimo' : (String(data.get('personName') || '').trim() || 'Não informado'), room: anonymous ? 'Não informado' : String(data.get('room') || '').trim(), date: todayISO(), time: nowTime(), questionnaireId: qq.id, questionnaireTitle: qq.title, interviewer: 'Resposta pelo formulário', obs: '', createdAt: Date.now(), answers };
+    DB.interviews.push(record);
+    try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+    catch (_) { DB.interviews.pop(); error.textContent = 'Não foi possível salvar. Mantenha esta página aberta e tente novamente.'; return; }
+    root.innerHTML = `<div class="max-w-2xl mx-auto">${publicHeader('Respostas enviadas!', 'Seu formulário foi concluído.')}<div class="card p-8"><span class="badge badge-green">Concluído</span><h2 class="text-xl font-bold mt-4">Obrigado pela participação!</h2><p class="text-muted text-sm mt-3">Suas respostas foram salvas neste navegador e estão disponíveis no painel do entrevistador.</p><a href="#/inicio" class="btn btn-primary mt-6">Voltar ao início</a></div></div>`;
+  };
+}
+function pagePurposeEditor() {
+  $('#page-title').textContent = 'Finalidade do site';
+  $('#page-sub').textContent = 'Descrição exibida na terceira opção da página inicial';
+  $('#page').innerHTML = pageHead('Finalidade do site', 'Adicione a descrição quando estiver pronta.') + `<form id="purpose-form" class="card p-6 max-w-2xl"><label for="purpose-text" class="lbl">Descrição da finalidade</label><textarea id="purpose-text" class="input" rows="9" maxlength="10000" placeholder="Descreva o objetivo do projeto...">${esc(DB.purpose || '')}</textarea><button class="btn btn-primary mt-5" type="submit">Salvar descrição</button><a href="#/finalidade" class="btn btn-ghost mt-5">Ver página</a></form>`;
+  $('#purpose-form').onsubmit = e => { e.preventDefault(); DB.purpose = $('#purpose-text').value.trim(); saveDB(); toast('Descrição da finalidade salva.'); };
+}
+window.addEventListener('storage', e => {
+  if (e.key === DB_KEY) { loadDB(); if (location.hash === '#/entrevistado' || location.hash === '#/finalidade') route(); }
+});
+
+/* ═══════════════ ACESSO COM SENHA + BOOT ═══════════════ */
+function navigate(hash) {
+  try { history.replaceState(null, '', hash); } catch (_) {}
+  route(hash);
+}
+function enterApp() {
+  if (!Auth.current()) return renderInterviewerLogin();
+  navigate('#/dashboard');
+}
+function boot() {
+  loadDB();
+  if (typeof Chart !== 'undefined') { try { chartDefaults(); } catch (_) {} }
+  $('#btn-menu').onclick = openSidebar;
+  $('#sidebar-overlay').onclick = closeSidebar;
+  $('#btn-logout').onclick = () => Auth.logout();
+  $('#btn-logout-2').onclick = () => Auth.logout();
+  window.addEventListener('hashchange', route);
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href^="#/"]');
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    navigate(link.getAttribute('href'));
+  });
+  window.addEventListener('beforeunload', () => { if (editDraft) { const i = Service.qIndex(editQid); if (i >= 0) { DB.questionnaires[i] = JSON.parse(JSON.stringify(editDraft)); saveDB(); } } });
+  route();
+}
+boot();
+</script>
+</body>
+</html>

@@ -248,6 +248,7 @@ const ICONS = {
 };
 
 /* ─────────────── STORAGE (camada isolada) ─────────────── */
+const DEFAULT_PURPOSE = "O QZent tem como finalidade pesquisar como os alunos utilizam a inteligência artificial nos estudos. Por meio de um questionário, buscamos conhecer as ferramentas mais utilizadas, a frequência de uso e as principais atividades em que a IA está presente.\n\nA pesquisa também procura compreender como esse uso influencia a produtividade, a autonomia e o pensamento crítico dos estudantes. Os resultados servirão para conhecer os hábitos dos alunos e promover uma reflexão sobre o uso consciente da inteligência artificial como apoio ao aprendizado.";
 const DB_KEY = 'qzent_db_v1';
 let DB = null;
 
@@ -1315,7 +1316,13 @@ function publicRoute(h) {
     return renderPublicForm(id, query === 'anonimo=1', query === 'professor=1');
   }
   if (h === '#/finalidade') {
-    root.innerHTML = publicHeader('Finalidade do site', 'Conheça o objetivo deste projeto.') + `<article class="card p-6 md:p-8"><p class="text-slate-200 leading-relaxed whitespace-pre-wrap">${esc(DB.purpose?.trim() || 'A descrição da finalidade do site será adicionada em breve.')}</p></article>`;
+    root.innerHTML = publicHeader('Finalidade do site', 'Uma pesquisa sobre inteligência artificial e aprendizado.') + `<section class="card relative overflow-hidden p-6 md:p-10 mb-6" style="background:radial-gradient(circle at top right,rgba(59,130,246,.18),transparent 65%),#10141c">
+      <div class="absolute right-6 top-6 opacity-10 pointer-events-none" aria-hidden="true"><img src="/assets/qzent-brain.png" alt="" width="190" height="190"></div>
+      <div class="relative max-w-2xl"><span class="badge badge-blue mb-5">IA na vida escolar</span><h2 class="text-2xl md:text-3xl font-extrabold text-white leading-tight mb-5">Como os alunos usam a inteligência artificial?</h2><div class="w-16 h-1 rounded-full bg-blue-500 mb-6" aria-hidden="true"></div><p class="text-slate-200 leading-relaxed whitespace-pre-wrap">${esc(DB.purpose?.trim() || DEFAULT_PURPOSE)}</p></div>
+    </section><div class="grid md:grid-cols-3 gap-4 mb-6">
+      ${[{icon:ICONS.gear,title:'Ferramentas e usos',text:'Conhecer quais IAs os alunos utilizam e em quais tarefas de estudo.'},{icon:ICONS.clock,title:'Hábitos de estudo',text:'Entender a frequência de uso e a percepção sobre tempo e produtividade.'},{icon:ICONS.search,title:'Autonomia e pensamento crítico',text:'Investigar a verificação de informações e a relação entre apoio e dependência.'}].map(item=>`<article class="card p-6"><span class="inline-flex p-3 rounded-xl bg-blue-500/10 text-blue-400 mb-4" aria-hidden="true">${item.icon}</span><h3 class="font-bold text-white mb-2">${item.title}</h3><p class="text-sm text-muted leading-relaxed">${item.text}</p></article>`).join('')}
+    </div><section class="card p-6 flex flex-col sm:flex-row sm:items-center gap-5 border-l-4 border-blue-500"><div class="flex-1"><h2 class="font-bold text-white mb-2">Sua experiência faz parte da pesquisa</h2><p class="text-muted text-sm leading-relaxed">Compartilhe como a IA está presente nos seus estudos. Você também pode participar no modo anônimo.</p></div><a href="#/entrevistado" class="btn btn-primary shrink-0">Participar da pesquisa →</a></section>`;
+
     return;
   }
   root.innerHTML = `<div class="py-8 md:py-14"><a href="#/inicio" class="flex items-center gap-3 mb-7 w-fit" aria-label="QZent — página inicial"><img src="/assets/qzent-brain.png" alt="Logo QZent — cérebro azul" width="88" height="88" class="object-contain"><span class="text-white font-extrabold text-2xl tracking-tight">QZent</span></a><span class="badge badge-blue">Questionários &amp; Entrevistas</span><h1 class="text-4xl md:text-5xl font-extrabold text-white mt-5 tracking-tight">Bem-vindo ao QZent</h1><p class="text-muted mt-4 mb-9 leading-relaxed">Escolha como deseja acessar o site.</p><div class="role-grid">
@@ -1370,7 +1377,7 @@ function renderPublicForm(id, anonymous = false, teacher = false) {
 function pagePurposeEditor() {
   $('#page-title').textContent = 'Finalidade do site';
   $('#page-sub').textContent = 'Descrição exibida na terceira opção da página inicial';
-  $('#page').innerHTML = pageHead('Finalidade do site', 'Adicione a descrição quando estiver pronta.') + `<form id="purpose-form" class="card p-6 max-w-2xl"><label for="purpose-text" class="lbl">Descrição da finalidade</label><textarea id="purpose-text" class="input" rows="9" maxlength="10000" placeholder="Descreva o objetivo do projeto...">${esc(DB.purpose || '')}</textarea><button class="btn btn-primary mt-5" type="submit">Salvar descrição</button><a href="#/finalidade" class="btn btn-ghost mt-5">Ver página</a></form>`;
+  $('#page').innerHTML = pageHead('Finalidade do site', 'Edite a descrição da pesquisa exibida no site.') + `<form id="purpose-form" class="card p-6 max-w-2xl"><label for="purpose-text" class="lbl">Descrição da finalidade</label><textarea id="purpose-text" class="input" rows="9" maxlength="10000" placeholder="Descreva o objetivo do projeto...">${esc(DB.purpose || DEFAULT_PURPOSE)}</textarea><button class="btn btn-primary mt-5" type="submit">Salvar descrição</button><a href="#/finalidade" class="btn btn-ghost mt-5">Ver página</a></form>`;
   $('#purpose-form').onsubmit = e => { e.preventDefault(); DB.purpose = $('#purpose-text').value.trim(); saveDB(); toast('Descrição da finalidade salva.'); };
 }
 window.addEventListener('storage', e => {

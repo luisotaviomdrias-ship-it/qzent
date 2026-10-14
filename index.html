@@ -378,10 +378,14 @@ const Shared = {
   },
   async refresh(importLocal = false) {
     const before = JSON.stringify(DB.interviews);
+    this.pendingImports = 0;
     if (importLocal) {
       for (const record of DB.interviews.filter(i => !i.demo && !i.shared)) {
         const questionnaire = Service.qGet(record.questionnaireId);
-        if (questionnaire) {await this.send(record,questionnaire,true);record.shared=true;saveDB();}
+        if (questionnaire) {
+          try {await this.send(record,record.questionnaireSnapshot || questionnaire,true);record.shared=true;saveDB();}
+          catch (_) {this.pendingImports = (this.pendingImports || 0) + 1;}
+        }
       }
     }
     const response = await fetch('/api/research');
@@ -486,16 +490,24 @@ const Service = {
   },
   resetAll() { localStorage.removeItem(DB_KEY); DB = seedDemo(); saveDB(); },
   exportCSV() {
-    const rows = [];
-    const header = ['Entrevistado', 'Sala', 'Questionário', 'Data', 'Horário', 'Entrevistador', 'Observação'];
-    const qIds = DB.questionnaires.map(q => q.id);
-    rows.push(header.join(','));
-    DB.interviews.forEach(iv => {
-      const base = [iv.personName, iv.room, iv.questionnaireTitle, iv.date, iv.time, iv.interviewer || '', (iv.obs || '').replace(/\n/g, ' ')]
-        .map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',');
-      rows.push(base);
-    });
-    return rows.join('\n');
+    const questions = new Map();
+    for (const iv of DB.interviews) {
+      const qq = iv.questionnaireSnapshot || this.qGet(iv.questionnaireId);
+      for (const q of qq?.questions || []) questions.set(iv.questionnaireId+':'+q.id,q.text);
+    }
+    const cell = value => {
+      let text = Array.isArray(value) ? value.join(' | ') : String(value ?? '');
+      if (/^[\s]*[=+@-]/.test(text)) text = "'" + text;
+      return '"' + text.replace(/"/g,'""') + '"';
+    };
+    const header = ['Entrevistado','Perfil','Sala','Questionário','Data','Horário','Entrevistador','Observação',...questions.values()];
+    const rows = [header.map(cell).join(',')];
+    for (const iv of DB.interviews) {
+      const values = [iv.personName,iv.respondentRole || (iv.anonymous ? 'anonimo' : 'entrevistado'),iv.room,iv.questionnaireTitle,iv.date,iv.time,iv.interviewer || '',iv.obs || ''];
+      for (const key of questions.keys()) values.push(key.startsWith(iv.questionnaireId+':') ? iv.answers?.[key.slice(iv.questionnaireId.length+1)] : '');
+      rows.push(values.map(cell).join(','));
+    }
+    return rows.join('\r\n');
   },
 };
 
@@ -1110,7 +1122,7 @@ function pageEntrevistados() {
 
 function viewInterview(id) {
   const iv = DB.interviews.find(x => x.id === id); if (!iv) return;
-  const qq = Service.qGet(iv.questionnaireId);
+  const qq = iv.questionnaireSnapshot || Service.qGet(iv.questionnaireId);
   const fmtAns = (q, v) => {
     if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return '<span class="text-muted italic">Sem resposta</span>';
     if (Array.isArray(v)) return v.map(x => `<span class="badge badge-blue mr-1">${esc(x)}</span>`).join('');
@@ -1174,7 +1186,7 @@ function pageResultados() {
     // métricas agregadas por pergunta
     const perQ = {};
     list.forEach(iv => {
-      const qq = Service.qGet(iv.questionnaireId); if (!qq) return;
+      const qq = iv.questionnaireSnapshot || Service.qGet(iv.questionnaireId); if (!qq) return;
       qq.questions.forEach(q => {
         const v = iv.answers[q.id];
         perQ[q.id] = perQ[q.id] || { q, numeric: [], count: 0, dist: {} };
@@ -1333,6 +1345,7 @@ function renderInterviewerLogin() {
     try {
       if (!await Auth.login(input.value)) throw new Error(input.value ? 'Senha incorreta. Tente novamente.' : 'Digite a senha para entrar.');
       await Shared.refresh(true);
+      if (Shared.pendingImports) toast('Algumas pesquisas antigas aguardam sincronização. Os dados locais foram preservados.','info');
       showSpace('app'); route('#/dashboard');
     } catch (err) {
       Auth.session = null; error.textContent = err.message || 'Não foi possível entrar. Tente novamente.';
@@ -1392,7 +1405,36 @@ function renderPublicForm(id, anonymous = false, teacher = false) {
   root.innerHTML = `<div class="max-w-2xl mx-auto">${publicHeader(qq.title, qq.description || (anonymous ? 'Responda às perguntas sem informar nome ou sala.' : teacher ? 'Informe seu nome e responda às perguntas abaixo.' : 'Preencha seus dados e responda às perguntas abaixo.'))}<p class="text-xs text-muted mb-5">* Campos obrigatórios. As respostas são enviadas ao painel dos entrevistadores.</p><form id="respondent-form">${anonymous ? '<div class="badge badge-blue mb-5">Modo anônimo · sem nome e sala</div>' : teacher ? `<div class="badge badge-blue mb-5">Sou professor</div><div class="card public-question border-t-4 border-blue-500"><label for="respondent-name" class="lbl">Nome do professor *</label><input id="respondent-name" name="personName" class="input" required maxlength="120" autocomplete="name" placeholder="Informe seu nome"></div>` : `<div class="card public-question border-t-4 border-blue-500"><label for="respondent-name" class="lbl">Nome do entrevistado (opcional)</label><input id="respondent-name" name="personName" class="input mb-4" maxlength="120" autocomplete="name" placeholder="Pode deixar em branco"><label for="respondent-room" class="lbl">Sala *</label><input id="respondent-room" name="room" class="input" required maxlength="80" placeholder="Ex.: 104"></div><button type="button" id="switch-anonymous" class="btn btn-ghost w-full mb-5">Prefiro responder anonimamente</button>`}${qq.questions.map((q, index) => `<fieldset class="card public-question" data-question="${index}"><legend>${index+1}. ${esc(q.text)} ${q.required ? '<span class="text-red-400">*</span>' : ''}</legend>${q.hint ? `<p class="text-sm text-muted mt-2">${esc(q.hint)}</p>` : ''}${publicQuestionInput(q,index)}</fieldset>`).join('')}<p id="public-form-error" class="text-red-400 text-sm mb-4" role="alert"></p><button class="btn btn-primary w-full !py-3" type="submit">Enviar respostas</button><a href="#/entrevistado" class="btn btn-ghost w-full mt-3">Voltar aos formulários</a></form></div>`;
   const anonymousButton = $('#switch-anonymous');
   if (anonymousButton && !anonymous && !teacher) anonymousButton.onclick = () => navigate('#/responder/' + encodeURIComponent(id) + '?anonimo=1');
-  const submissionId = uid();
+  const form = $('#respondent-form');
+  const draftKey = 'qzent_draft:' + id + ':' + (anonymous ? 'anonimo' : teacher ? 'professor' : 'aluno');
+  let draft = null;
+  try {draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null');} catch (_) {}
+  if (draft?.updatedAt !== qq.updatedAt) draft = null;
+  const submissionId = draft?.submissionId || uid();
+  for (const control of form.querySelectorAll('input,textarea,select')) {
+    const values = draft?.values?.[control.name];
+    if (!values) continue;
+    if (control.type === 'checkbox' || control.type === 'radio') control.checked = values.includes(control.value);
+    else control.value = values[0] || '';
+  }
+  const progress = document.createElement('p');
+  progress.className = 'text-xs text-blue-400 mb-4';
+  progress.setAttribute('aria-live','polite');
+  form.prepend(progress);
+  const saveDraft = () => {
+    const data = new FormData(form), values = {};
+    for (const [key,value] of data.entries()) {
+      if (anonymous && !key.startsWith('answer-')) continue;
+      (values[key] ||= []).push(value);
+    }
+    const completed = qq.questions.filter((q,index)=>(values['answer-'+index] || []).some(v=>String(v).trim())).length;
+    progress.textContent = completed + ' de ' + qq.questions.length + ' perguntas respondidas';
+    try {sessionStorage.setItem(draftKey,JSON.stringify({submissionId,updatedAt:qq.updatedAt,values}));}
+    catch (_) {progress.textContent += ' · mantenha esta página aberta para preservar suas respostas';}
+  };
+  form.addEventListener('input',saveDraft);
+  form.addEventListener('change',saveDraft);
+  saveDraft();
   $('#respondent-form').onsubmit = async e => {
     e.preventDefault();
     const form = e.currentTarget, data = new FormData(form), answers = {};
@@ -1406,7 +1448,7 @@ function renderPublicForm(id, anonymous = false, teacher = false) {
       let value = q.type === 'multi' ? data.getAll('answer-' + index) : (data.get('answer-' + index) || '').trim();
       if (q.required && (Array.isArray(value) ? !value.length : value === '')) {
         error.textContent = `Responda à pergunta ${index+1} antes de enviar.`;
-        const input = form.querySelector(`[data-question="${index}"] input`); input?.focus(); return;
+        const input = form.querySelector(`[data-question="${index}"] input, [data-question="${index}"] textarea, [data-question="${index}"] select`); input?.focus(); return;
       }
       if (Q_TYPES[q.type].numeric && value !== '') value = Number(value);
       answers[q.id] = value;
@@ -1414,9 +1456,10 @@ function renderPublicForm(id, anonymous = false, teacher = false) {
     const record = { id: submissionId, demo: false, anonymous, respondentRole: teacher ? 'professor' : (anonymous ? 'anonimo' : 'entrevistado'), personName: anonymous ? 'Anônimo' : (String(data.get('personName') || '').trim() || 'Não informado'), room: anonymous || teacher ? 'Não informado' : String(data.get('room') || '').trim(), date: todayISO(), time: nowTime(), questionnaireId: qq.id, questionnaireTitle: qq.title, interviewer: 'Resposta pelo formulário', obs: teacher ? 'Respondente: professor' : '', createdAt: Date.now(), answers };
     const button = form.querySelector('button[type="submit"]');
     if (button.disabled) return;
-    button.disabled = true;
+    button.disabled = true; button.textContent = 'Enviando respostas…';
     try { await Shared.send(record,qq); record.shared = true; DB.interviews.push(record); saveDB(); }
-    catch (err) { error.textContent = err.message; button.disabled = false; return; }
+    catch (err) { error.textContent = 'Não foi possível enviar. Suas respostas estão preservadas nesta aba. Tente novamente.'; button.disabled = false; button.textContent = 'Tentar enviar novamente'; return; }
+    try {sessionStorage.removeItem(draftKey);} catch (_) {}
     root.innerHTML = `<div class="max-w-2xl mx-auto">${publicHeader('Respostas enviadas!', 'Seu formulário foi concluído.')}<div class="card p-8"><span class="badge badge-green">Concluído</span><h2 class="text-xl font-bold mt-4">Obrigado pela participação!</h2><p class="text-muted text-sm mt-3">Suas respostas foram salvas e estão disponíveis para todos os entrevistadores.</p><a href="#/inicio" class="btn btn-primary mt-6">Voltar ao início</a></div></div>`;
   };
 }

@@ -1,4 +1,4 @@
-const {put,get,list,del}=require('@vercel/blob');
+const {put,get,list}=require('@vercel/blob');
 const crypto=require('node:crypto');
 const prefix='research/';
 const sign=v=>crypto.createHmac('sha256',process.env.QZENT_SESSION_SECRET).update(v).digest('hex');
@@ -6,7 +6,7 @@ function authorized(req){
  const token=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('qzent_session='))?.slice(14);
  if(!token)return false;
  const [expires,signature]=token.split('.');
- if(!expires||!signature||Number(expires)<Date.now())return false;
+ if(!expires||!signature||!Number.isFinite(Number(expires))||Number(expires)<Date.now())return false;
  const expected=sign(expires);
  return signature.length===expected.length&&crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected));
 }
@@ -16,10 +16,10 @@ async function read(path){
 }
 function validate(body, legacy=false){
  const r=body.record,q=body.questionnaire;
- if(!r||!q||typeof r.id!=='string'||! /^[a-zA-Z0-9_-]{1,100}$/.test(r.id)||!Array.isArray(q.questions)||q.questions.length>100||!q.questions.length||r.questionnaireId!==q.id||!r.answers||typeof r.answers!=='object'||Array.isArray(r.answers))throw Error('Dados inválidos.');
+ if(!r||!q||typeof q.id!=='string'||typeof q.title!=='string'||q.title.length>300||typeof r.id!=='string'||! /^[a-zA-Z0-9_-]{1,100}$/.test(r.id)||!Array.isArray(q.questions)||q.questions.length>100||!q.questions.length||r.questionnaireId!==q.id||!r.answers||typeof r.answers!=='object'||Array.isArray(r.answers))throw Error('Dados inválidos.');
  for(const k of ['personName','room','interviewer','obs','questionnaireTitle','date','time'])if(typeof r[k]!=='string'||r[k].length>2000)throw Error('Dados inválidos.');
  for(const item of q.questions){
-  if(typeof item.id!=='string'||typeof item.text!=='string'||item.text.length>1000)throw Error('Pergunta inválida.');
+  if(typeof item.id!=='string'||typeof item.text!=='string'||item.text.length>1000||!['short','long','single','multi','list','yesno','scale5','note10'].includes(item.type)||!Array.isArray(item.options)||item.options.length>100||item.options.some(o=>typeof o!=='string'||o.length>500))throw Error('Pergunta inválida.');
   const value=r.answers[item.id];
   if(!legacy&&item.required&&(value===undefined||value===null||value===''||(Array.isArray(value)&&!value.length)))throw Error('Responda todas as perguntas obrigatórias.');
   if(value!==undefined&&!(typeof value==='string'||typeof value==='number'||(Array.isArray(value)&&value.every(v=>typeof v==='string'))))throw Error('Resposta inválida.');
@@ -65,7 +65,8 @@ module.exports=async(req,res)=>{
   }
   if(req.method==='POST'){
    if(JSON.stringify(req.body).length>150000)return res.status(413).json({error:'Formulário muito grande.'});
-   const data=validate(req.body,req.body.legacy===true&&authorized(req)),path=prefix+data.record.id+'.json';
+   let data;try {data=validate(req.body,req.body.legacy===true&&authorized(req));}catch(err){return res.status(400).json({error:err.message});}
+   const path=prefix+data.record.id+'.json';
    const existing=await read(path);
    if(existing)return res.json({ok:true,id:data.record.id,deleted:!!existing.deleted});
    await put(path,JSON.stringify({...data,receivedAt:Date.now()}),{access:'private',addRandomSuffix:false,contentType:'application/json'});

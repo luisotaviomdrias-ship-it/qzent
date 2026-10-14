@@ -377,6 +377,7 @@ const Shared = {
     if (!response.ok) throw new Error(result.error || 'Não foi possível enviar a pesquisa.');
   },
   async refresh(importLocal = false) {
+    const before = JSON.stringify(DB.interviews);
     if (importLocal) {
       for (const record of DB.interviews.filter(i => !i.demo && !i.shared)) {
         const questionnaire = Service.qGet(record.questionnaireId);
@@ -394,6 +395,7 @@ const Shared = {
       else for (const question of row.questionnaire.questions) if (!local.questions.some(q=>q.id===question.id)) local.questions.push(question);
     }
     saveDB();
+    return before !== JSON.stringify(DB.interviews);
   }
 };
 
@@ -1437,7 +1439,7 @@ function enterApp() {
   if (!Auth.current()) return renderInterviewerLogin();
   navigate('#/dashboard');
 }
-function boot() {
+async function boot() {
   loadDB();
   if (typeof Chart !== 'undefined') { try { chartDefaults(); } catch (_) {} }
   $('#btn-menu').onclick = openSidebar;
@@ -1454,9 +1456,16 @@ function boot() {
   window.addEventListener('beforeunload', () => { if (editDraft) { const i = Service.qIndex(editQid); if (i >= 0) { DB.questionnaires[i] = JSON.parse(JSON.stringify(editDraft)); saveDB(); } } });
   setInterval(async () => {
     if (!Auth.current() || editDraft || location.hash.startsWith('#/exec/')) return;
-    try {await Shared.refresh(); if (['#/dashboard','#/entrevistados','#/resultados'].includes(location.hash)) route();}
+    try {
+      const changed = await Shared.refresh();
+      if (changed && location.hash === '#/dashboard') route();
+      else if (changed) toast('Novas respostas disponíveis. Clique em Atualizar pesquisas.','info');
+    }
     catch (_) {}
   },30000);
+  if (!['#/inicio','#/entrevistado','#/finalidade'].includes(location.hash) && !location.hash.startsWith('#/responder/')) {
+    try {await Shared.refresh();Auth.session = {user:'Entrevistador',role:'interviewer'};} catch (_) {}
+  }
   route();
 }
 boot();

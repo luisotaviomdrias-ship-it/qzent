@@ -17,6 +17,7 @@ async function read(path){
  return JSON.parse(await new Response(result.stream).text());
 }
 function failureCode(error){
+ if(/Failed to fetch blob: 403/.test(String(error?.message||'')))return 'STORAGE_READ_BLOCKED';
  if(!process.env.BLOB_READ_WRITE_TOKEN&&!process.env.BLOB_STORE_ID)return 'STORAGE_NOT_CONFIGURED';
  if(error instanceof SyntaxError)return 'INVALID_STORED_RECORD';
  const name=String(error?.name||'');

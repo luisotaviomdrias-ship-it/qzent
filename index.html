@@ -448,14 +448,14 @@ function exportResultsPDF(rows) {
   if (!rows.length) { toast('Não há resultados para exportar.', 'info'); return; }
   const win = window.open('', '_blank');
   if (!win) { toast('Permita a abertura do relatório para salvar em PDF.', 'info'); return; }
-  const rooms = {};
-  const questions = {};
+  const rooms = Object.create(null);
+  const questions = Object.create(null);
   rows.forEach(iv => {
     rooms[iv.room || 'Sem sala'] = (rooms[iv.room || 'Sem sala'] || 0) + 1;
     const qq = iv.questionnaireSnapshot || Service.qGet(iv.questionnaireId);
     (qq?.questions || []).forEach(q => {
       const key = iv.questionnaireId + ':' + q.id;
-      const slot = questions[key] ||= {title:q.text, answers:{}};
+      const slot = questions[key] ||= {title:q.text, answers:Object.create(null)};
       const answer = iv.answers?.[q.id];
       (Array.isArray(answer) ? answer : [answer]).forEach(v => {
         if (v !== undefined && v !== null && v !== '') slot.answers[String(v)] = (slot.answers[String(v)] || 0) + 1;
@@ -466,7 +466,7 @@ function exportResultsPDF(rows) {
   const questionHTML = Object.values(questions).map(q => '<section><h2>' + esc(q.title) + '</h2><table><thead><tr><th>Resposta</th><th>Quantidade</th></tr></thead><tbody>' + Object.entries(q.answers).map(([answer,n]) => '<tr><td>' + esc(answer) + '</td><td>' + n + '</td></tr>').join('') + '</tbody></table></section>').join('');
   const filterHTML = ['#r-q','#r-room','#r-period'].map(id => {
     const input = $(id); return input ? esc(input.options[input.selectedIndex].text) : '';
-  }).filter(Boolean).join(' · ');
+  }).filter(Boolean).concat($('#r-name')?.value.trim() ? ['Nome: ' + esc($('#r-name').value.trim())] : []).join(' · ');
   win.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>QZENT — Resultados das pesquisas</title><style>body{font:14px Arial;color:#111;margin:32px}h1{color:#0033cc}h2{font-size:17px}section,.room{break-inside:avoid;margin:20px 0}.bar{height:18px;border:1px solid #888;margin-top:7px;print-color-adjust:exact;-webkit-print-color-adjust:exact}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:8px;text-align:left}td{overflow-wrap:anywhere}button{padding:12px;cursor:pointer}@media print{button{display:none}body{margin:0}@page{size:A4;margin:16mm}}</style></head><body><button onclick="window.print()">Salvar em PDF / Imprimir</button><h1>QZENT — Resultados das pesquisas</h1><p>Gerado em ' + esc(new Date().toLocaleString('pt-BR')) + '</p><p>' + filterHTML + '</p><p>Total: ' + rows.length + ' entrevista(s)</p><h2>Comparação entre salas</h2><p>Final 1: verde · Final 2: preto · Final 3: azul claro · Final 4: azul escuro forte</p>' + roomHTML + questionHTML + '</body></html>');
   win.document.close();
   win.focus();

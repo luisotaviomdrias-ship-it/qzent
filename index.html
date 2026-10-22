@@ -389,7 +389,7 @@ const Shared = {
       const response = await fetch('/api/research', {cache:'no-store'});
       const result = await response.json();
       if (!response.ok) {
-        const error = new Error(response.status === 401 ? 'Sua sessão expirou. Entre novamente para atualizar as pesquisas.' : (result.error || 'Não foi possível atualizar as pesquisas. Os dados deste aparelho foram preservados.'));
+        const error = new Error(response.status === 401 ? 'Sua sessão expirou. Entre novamente para atualizar as pesquisas.' : (result.code === 'STORAGE_READ_BLOCKED' ? 'A Vercel bloqueou a leitura do armazenamento. As pesquisas deste aparelho continuam disponíveis; as demais aguardam a liberação do serviço.' : (result.error || 'Não foi possível atualizar as pesquisas. Os dados deste aparelho foram preservados.')));
         error.status = response.status;
         throw error;
       }
@@ -1585,15 +1585,7 @@ async function boot() {
     navigate(link.getAttribute('href'));
   });
   window.addEventListener('beforeunload', () => { if (editDraft) { const i = Service.qIndex(editQid); if (i >= 0) { DB.questionnaires[i] = JSON.parse(JSON.stringify(editDraft)); saveDB(); } } });
-  setInterval(async () => {
-    if (!Auth.current() || editDraft || location.hash.startsWith('#/exec/')) return;
-    try {
-      const changed = await Shared.refresh();
-      if (changed && location.hash === '#/dashboard') route();
-      else if (changed) toast('Novas respostas disponíveis. Clique em Atualizar pesquisas.','info');
-    }
-    catch (_) {}
-  },30000);
+  // Shared surveys refresh on login and explicit request; avoid rereading every blob every 30 seconds.
   if (!['#/inicio','#/entrevistado','#/finalidade'].includes(location.hash) && !location.hash.startsWith('#/responder/')) {
     try {if (await Shared.session()) {Auth.session = {user:'Entrevistador',role:'interviewer'};try {await Shared.refresh();}catch (_) {}}} catch (_) {}
   }

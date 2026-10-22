@@ -12,7 +12,15 @@ function authorized(req){
 }
 async function read(path){
  const result=await get(path,{access:'private',useCache:false});
- return result?.statusCode===200?JSON.parse(await new Response(result.stream).text()):null;
+ if(!result)return null;
+ if(result.statusCode!==200)throw Error('RESEARCH_READ_FAILED');
+ return JSON.parse(await new Response(result.stream).text());
+}
+function failureCode(error){
+ if(!process.env.BLOB_READ_WRITE_TOKEN&&!process.env.BLOB_STORE_ID)return 'STORAGE_NOT_CONFIGURED';
+ if(error instanceof SyntaxError)return 'INVALID_STORED_RECORD';
+ const name=String(error?.name||'');
+ return /^Blob[A-Za-z]+Error$/.test(name)?name:'RESEARCH_UNAVAILABLE';
 }
 function validate(body, legacy=false){
  const r=body.record,q=body.questionnaire;
@@ -49,13 +57,25 @@ module.exports=async(req,res)=>{
   }
   if(req.method==='GET'){
    if(!authorized(req))return res.status(401).json({error:'Entre com a senha do entrevistador.'});
-   const rows=[];let cursor;
+   if(req.query.action==='session')return res.json({ok:true});
+   const rows=[],deletedIds=[];let cursor,unavailable=0,firstError;
    do{
     const page=await list({prefix,limit:1000,cursor});
-    for(let i=0;i<page.blobs.length;i+=10)rows.push(...await Promise.all(page.blobs.slice(i,i+10).map(b=>read(b.pathname))));
+    for(let i=0;i<page.blobs.length;i+=10){
+     const batch=page.blobs.slice(i,i+10);
+     const results=await Promise.allSettled(batch.map(b=>read(b.pathname)));
+     results.forEach((result,index)=>{
+      if(result.status==='rejected'){unavailable++;firstError ||= result.reason;return;}
+      const row=result.value;
+      if(row?.deleted){deletedIds.push(batch[index].pathname.slice(prefix.length).replace(/\.json$/,''));return;}
+      if(row?.record?.id&&row.questionnaire?.id&&Array.isArray(row.questionnaire.questions))rows.push(row);
+      else {unavailable++;firstError ||= Error('RESEARCH_READ_FAILED');}
+     });
+    }
     cursor=page.hasMore?page.cursor:undefined;
    }while(cursor);
-   return res.json({rows:rows.filter(row=>row&&!row.deleted)});
+   if(unavailable&&!rows.length)throw firstError;
+   return res.json({rows,deletedIds,partial:unavailable>0,unavailable});
   }
   if(req.method==='DELETE'){
    if(!authorized(req))return res.status(401).json({error:'Acesso necessário.'});
@@ -73,5 +93,5 @@ module.exports=async(req,res)=>{
    return res.status(201).json({ok:true,id:data.record.id});
   }
   res.setHeader('Allow','GET, POST, DELETE');return res.status(405).json({error:'Método não permitido.'});
- }catch(error){console.error('Research API:',error.message);return res.status(500).json({error:'Não foi possível acessar as pesquisas. Tente novamente.'});}
+ }catch(error){console.error('Research API:',error.message);return res.status(503).json({error:'Não foi possível acessar as pesquisas salvas. Seus dados não foram apagados. Tente atualizar novamente.',code:failureCode(error)});}
 };

@@ -371,6 +371,12 @@ const Auth = {
 
 
 const Shared = {
+  error: '',
+  async session() {
+    const response = await fetch('/api/research?action=session', {cache:'no-store'});
+    if (!response.ok) return false;
+    return (await response.json()).ok === true;
+  },
   async send(record, questionnaire, legacy = false) {
     const response = await fetch('/api/research', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({record,questionnaire,legacy})});
     const result = await response.json();
@@ -379,27 +385,40 @@ const Shared = {
   async refresh(importLocal = false) {
     const before = JSON.stringify(DB.interviews);
     this.pendingImports = 0;
-    if (importLocal) {
-      for (const record of DB.interviews.filter(i => !i.demo && !i.shared)) {
-        const questionnaire = Service.qGet(record.questionnaireId);
-        if (questionnaire) {
-          try {await this.send(record,record.questionnaireSnapshot || questionnaire,true);record.shared=true;saveDB();}
-          catch (_) {this.pendingImports = (this.pendingImports || 0) + 1;}
+    try {
+      const response = await fetch('/api/research', {cache:'no-store'});
+      const result = await response.json();
+      if (!response.ok) {
+        const error = new Error(response.status === 401 ? 'Sua sessão expirou. Entre novamente para atualizar as pesquisas.' : (result.error || 'Não foi possível atualizar as pesquisas. Os dados deste aparelho foram preservados.'));
+        error.status = response.status;
+        throw error;
+      }
+      if (!Array.isArray(result.rows)) throw new Error('Resposta inválida ao carregar pesquisas. Os dados deste aparelho foram preservados.');
+      const validRows = result.rows.filter(row => row?.record?.id && row.questionnaire?.id && Array.isArray(row.questionnaire.questions));
+      const records = new Map(DB.interviews.map(record => [record.id,record]));
+      for (const row of validRows) records.set(row.record.id,{...row.record, questionnaireSnapshot:row.record.questionnaireSnapshot || row.questionnaire, shared:true});
+      for (const id of result.deletedIds || []) records.delete(id);
+      DB.interviews = [...records.values()];
+      for (const row of validRows) {
+        const local = Service.qGet(row.questionnaire.id);
+        if (!local) DB.questionnaires.push(row.questionnaire);
+        else for (const question of row.questionnaire.questions) if (!local.questions.some(q=>q.id===question.id)) local.questions.push(question);
+      }
+      this.error = result.partial || validRows.length !== result.rows.length ? 'Algumas pesquisas não puderam ser carregadas. Os registros disponíveis e os dados deste aparelho foram preservados. Tente atualizar novamente.' : '';
+      saveDB();
+      if (importLocal) {
+        for (const record of DB.interviews.filter(i => !i.demo && !i.shared)) {
+          const questionnaire = record.questionnaireSnapshot || Service.qGet(record.questionnaireId);
+          if (!questionnaire) {this.pendingImports++;continue;}
+          try {await this.send(record,questionnaire,true);record.shared=true;saveDB();}
+          catch (_) {this.pendingImports++;}
         }
       }
+      return before !== JSON.stringify(DB.interviews);
+    } catch (error) {
+      this.error = error.message || 'Não foi possível atualizar as pesquisas. Os dados deste aparelho foram preservados.';
+      throw error;
     }
-    const response = await fetch('/api/research');
-    if (!response.ok) throw new Error('Não foi possível carregar as pesquisas compartilhadas. Entre novamente.');
-    const {rows} = await response.json();
-    const records = new Map(rows.map(row => [row.record.id, {...row.record, questionnaireSnapshot:row.record.questionnaireSnapshot || row.questionnaire, shared:true}]));
-    DB.interviews = [...DB.interviews.filter(i=>i.demo || (!i.shared && !records.has(i.id))),...records.values()];
-    for (const row of rows) {
-      const local = Service.qGet(row.questionnaire.id);
-      if (!local) DB.questionnaires.push(row.questionnaire);
-      else for (const question of row.questionnaire.questions) if (!local.questions.some(q=>q.id===question.id)) local.questions.push(question);
-    }
-    saveDB();
-    return before !== JSON.stringify(DB.interviews);
   }
 };
 
@@ -619,7 +638,21 @@ function route(requestedHash) {
   $('#page-sub').textContent = s;
   const d = new Date();
   $('#page-sub').innerHTML += ' <button type="button" id="refresh-shared" class="text-blue-400 underline ml-2">Atualizar pesquisas</button>';
-  $('#refresh-shared').onclick = async () => {try {await Shared.refresh(true);route();toast('Pesquisas atualizadas.');}catch(err){toast(err.message,'error');}};
+  $('#refresh-shared').onclick = async () => {
+    const button = $('#refresh-shared');
+    if (button.disabled) return;
+    button.disabled = true; button.textContent = 'Carregando pesquisas…';
+    try {await Shared.refresh(true);route();toast(Shared.error || 'Pesquisas atualizadas.',Shared.error ? 'info' : 'success');}
+    catch(err){route();toast(err.message,'error');}
+    finally {button.disabled=false;button.textContent='Atualizar pesquisas';}
+  };
+  if (Shared.error) {
+    const notice = document.createElement('p');
+    notice.className = 'text-amber-300 text-sm mt-2';
+    notice.setAttribute('role','alert');
+    notice.textContent = Shared.error;
+    $('#page-sub').appendChild(notice);
+  }
   $('#top-date').innerHTML = `${ICONS.cal} ${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
   window.scrollTo({ top: 0 });
   $('#page').innerHTML = '';
@@ -1395,9 +1428,13 @@ function renderInterviewerLogin() {
     button.disabled = true; error.classList.add('hidden');
     try {
       if (!await Auth.login(input.value)) throw new Error(input.value ? 'Senha incorreta. Tente novamente.' : 'Digite a senha para entrar.');
-      await Shared.refresh(true);
+      try { await Shared.refresh(true); }
+      catch (err) {
+        if (err.status === 401) throw err;
+        toast('Você entrou. A sincronização está indisponível; as pesquisas deste aparelho foram preservadas.','info');
+      }
       if (Shared.pendingImports) toast('Algumas pesquisas antigas aguardam sincronização. Os dados locais foram preservados.','info');
-      showSpace('app'); route('#/dashboard');
+      showSpace('app'); navigate('#/dashboard');
     } catch (err) {
       Auth.session = null; error.textContent = err.message || 'Não foi possível entrar. Tente novamente.';
       error.classList.remove('hidden'); input.focus();
@@ -1558,7 +1595,7 @@ async function boot() {
     catch (_) {}
   },30000);
   if (!['#/inicio','#/entrevistado','#/finalidade'].includes(location.hash) && !location.hash.startsWith('#/responder/')) {
-    try {await Shared.refresh();Auth.session = {user:'Entrevistador',role:'interviewer'};} catch (_) {}
+    try {if (await Shared.session()) {Auth.session = {user:'Entrevistador',role:'interviewer'};try {await Shared.refresh();}catch (_) {}}} catch (_) {}
   }
   route();
 }

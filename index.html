@@ -391,7 +391,7 @@ const Shared = {
     const response = await fetch('/api/research');
     if (!response.ok) throw new Error('Não foi possível carregar as pesquisas compartilhadas. Entre novamente.');
     const {rows} = await response.json();
-    const records = new Map(rows.map(row => [row.record.id, {...row.record, shared:true}]));
+    const records = new Map(rows.map(row => [row.record.id, {...row.record, questionnaireSnapshot:row.record.questionnaireSnapshot || row.questionnaire, shared:true}]));
     DB.interviews = [...DB.interviews.filter(i=>i.demo || (!i.shared && !records.has(i.id))),...records.values()];
     for (const row of rows) {
       const local = Service.qGet(row.questionnaire.id);
@@ -443,8 +443,8 @@ function roomColor(room) {
   const digits = String(room || '').match(/\d/g);
   return ({1:'#22c55e',2:'#000000',3:'#7dd3fc',4:'#0033cc'})[digits ? digits[digits.length - 1] : ''] || '#94a3b8';
 }
-let pdfResultRows = null;
-function exportResultsPDF(rows) {
+
+function exportResultsPDF(rows, filterDescription = 'Todas as pesquisas salvas') {
   if (!rows.length) { toast('Não há resultados para exportar.', 'info'); return; }
   const win = window.open('', '_blank');
   if (!win) { toast('Permita a abertura do relatório para salvar em PDF.', 'info'); return; }
@@ -454,7 +454,7 @@ function exportResultsPDF(rows) {
     rooms[iv.room || 'Sem sala'] = (rooms[iv.room || 'Sem sala'] || 0) + 1;
     const qq = iv.questionnaireSnapshot || Service.qGet(iv.questionnaireId);
     (qq?.questions || []).forEach(q => {
-      const key = iv.questionnaireId + ':' + q.id;
+      const key = JSON.stringify([iv.questionnaireId, q.id]);
       const slot = questions[key] ||= {title:q.text, answers:Object.create(null)};
       const answer = iv.answers?.[q.id];
       (Array.isArray(answer) ? answer : [answer]).forEach(v => {
@@ -464,9 +464,7 @@ function exportResultsPDF(rows) {
   });
   const roomHTML = Object.keys(rooms).sort().map(room => '<div class="room"><strong>Sala ' + esc(room) + '</strong> — ' + rooms[room] + ' entrevista(s)<div class="bar" style="width:' + Math.max(1, rooms[room]/rows.length*100) + '%;background:' + roomColor(room) + '"></div></div>').join('');
   const questionHTML = Object.values(questions).map(q => '<section><h2>' + esc(q.title) + '</h2><table><thead><tr><th>Resposta</th><th>Quantidade</th></tr></thead><tbody>' + Object.entries(q.answers).map(([answer,n]) => '<tr><td>' + esc(answer) + '</td><td>' + n + '</td></tr>').join('') + '</tbody></table></section>').join('');
-  const filterHTML = ['#r-q','#r-room','#r-period'].map(id => {
-    const input = $(id); return input ? esc(input.options[input.selectedIndex].text) : '';
-  }).filter(Boolean).concat($('#r-name')?.value.trim() ? ['Nome: ' + esc($('#r-name').value.trim())] : []).join(' · ');
+  const filterHTML = esc(filterDescription);
   win.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>QZENT — Resultados das pesquisas</title><style>body{font:14px Arial;color:#111;margin:32px}h1{color:#0033cc}h2{font-size:17px}section,.room{break-inside:avoid;margin:20px 0}.bar{height:18px;border:1px solid #888;margin-top:7px;print-color-adjust:exact;-webkit-print-color-adjust:exact}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:8px;text-align:left}td{overflow-wrap:anywhere}button{padding:12px;cursor:pointer}@media print{button{display:none}body{margin:0}@page{size:A4;margin:16mm}}</style></head><body><button onclick="window.print()">Salvar em PDF / Imprimir</button><h1>QZENT — Resultados das pesquisas</h1><p>Gerado em ' + esc(new Date().toLocaleString('pt-BR')) + '</p><p>' + filterHTML + '</p><p>Total: ' + rows.length + ' entrevista(s)</p><h2>Comparação entre salas</h2><p>Final 1: verde · Final 2: preto · Final 3: azul claro · Final 4: azul escuro forte</p>' + roomHTML + questionHTML + '</body></html>');
   win.document.close();
   win.focus();
@@ -645,7 +643,9 @@ function pageDashboard() {
   el.innerHTML = `
     ${pageHead(`${greet}, entrevistador`, 'Aqui está o resumo das entrevistas realizadas no sistema.')}
     <div id="dash-body">${skeletonCards()}</div>`;
+  const dashBody = $('#dash-body');
   setTimeout(() => { // skeleton → dados reais
+    if ($('#dash-body') !== dashBody) return;
     const ivs = DB.interviews;
     const today = todayISO();
     const todayCount = ivs.filter(i => i.date === today).length;
@@ -1206,13 +1206,17 @@ function pageResultados() {
     </div>
     <div id="r-body">${skeletonCards(3)}</div>`;
 
-  const render = () => {
-    destroyCharts();
+  const resultsBody = $('#r-body');
+  const filteredRows = () => {
     const qid = $('#r-q').value, room = $('#r-room').value, per = $('#r-period').value;
-    const name = ($('#r-name').value || '').toLowerCase();
+    const name = ($('#r-name').value || '').trim().toLowerCase();
     const min = per === 'all' ? null : addDays(todayISO(), -parseInt(per));
-    let list = DB.interviews.filter(i => (!qid || i.questionnaireId === qid) && (!room || i.room === room) && (!min || i.date >= min) && i.personName.toLowerCase().includes(name));
-    pdfResultRows = list;
+    return DB.interviews.filter(i => (!qid || i.questionnaireId === qid) && (!room || i.room === room) && (!min || i.date >= min) && String(i.personName || '').toLowerCase().includes(name));
+  };
+  const render = () => {
+    if ($('#r-body') !== resultsBody) return;
+    destroyCharts();
+    const list = filteredRows();
     $('#results-pdf').disabled = !list.length;
     const body = $('#r-body');
 
@@ -1222,27 +1226,27 @@ function pageResultados() {
     }
 
     // métricas agregadas por pergunta
-    const perQ = {};
+    const perQ = Object.create(null);
     list.forEach(iv => {
       const qq = iv.questionnaireSnapshot || Service.qGet(iv.questionnaireId); if (!qq) return;
       qq.questions.forEach(q => {
-        const v = iv.answers[q.id];
-        perQ[q.id] = perQ[q.id] || { q, numeric: [], count: 0, dist: {} };
-        const slot = perQ[q.id];
+        const v = iv.answers?.[q.id];
+        const key = JSON.stringify([iv.questionnaireId, q.id]);
+        const slot = perQ[key] ||= { q, numeric: [], count: 0, dist: Object.create(null) };
         if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return;
         slot.count++;
-        if (Q_TYPES[q.type].numeric && typeof v === 'number') slot.numeric.push(v);
+        if (Q_TYPES[q.type]?.numeric && typeof v === 'number' && Number.isFinite(v)) slot.numeric.push(v);
         else (Array.isArray(v) ? v : [v]).forEach(x => { if (x) slot.dist[x] = (slot.dist[x] || 0) + 1; });
       });
     });
 
     const numericAvgs = Object.values(perQ).filter(s => s.numeric.length);
     const overallAvg = numericAvgs.length ? (numericAvgs.reduce((a, s) => a + s.numeric.reduce((x, y) => x + y, 0) / s.numeric.length, 0) / numericAvgs.length) : null;
-    const roomAgg = {};
+    const roomAgg = Object.create(null);
     list.forEach(i => { roomAgg[i.room] = (roomAgg[i.room] || 0) + 1; });
     const roomKeys = Object.keys(roomAgg).sort();
 
-    const choiceSlots = Object.values(perQ).filter(s => Q_TYPES[s.q.type].hasOptions && Object.keys(s.dist).length);
+    const choiceSlots = Object.values(perQ).filter(s => (Q_TYPES[s.q.type]?.hasOptions || s.q.type === 'yesno') && Object.keys(s.dist).length);
     let topQ = null, topV = null, topN = 0;
     choiceSlots.forEach(s => Object.entries(s.dist).forEach(([v, n]) => { if (n > topN) { topN = n; topQ = s.q; topV = v; } }));
 
@@ -1282,7 +1286,14 @@ function pageResultados() {
     });
   };
   ['#r-q', '#r-room', '#r-period', '#r-name'].forEach(s => { $(s).onchange = debounce(render, 150); $(s).oninput = debounce(render, 250); });
-  $('#results-pdf').onclick = () => { render(); exportResultsPDF(pdfResultRows || []); };
+  $('#results-pdf').onclick = () => {
+    const filters = ['#r-q','#r-room','#r-period'].map(id => {
+      const input = $(id); return input.options[input.selectedIndex].text;
+    });
+    const name = $('#r-name').value.trim();
+    if (name) filters.push('Nome: ' + name);
+    exportResultsPDF(filteredRows(), filters.join(' · '));
+  };
   setTimeout(render, 450);
 }
 
@@ -1350,7 +1361,7 @@ function pageConfig() {
     toast('CSV exportado com sucesso.');
   };
   $('#ex-pdf').onclick = () => exportResultsPDF(DB.interviews);
-  $('[data-soon]').forEach(b => b.onclick = () => toast(`Exportação ${b.dataset.soon} em breve — estrutura já preparada.`, 'info'));
+  $$('[data-soon]').forEach(b => b.onclick = () => toast(`Exportação ${b.dataset.soon} em breve — estrutura já preparada.`, 'info'));
   $('#cf-cleardemo').onclick = async () => {
     if (await confirmModal({ title: 'Remover dados de demonstração?', message: `${demoIvs} entrevista(s) e questionários não utilizados de exemplo serão removidos. Seus dados reais serão mantidos.`, confirmText: 'Remover demo' })) {
       Service.clearDemo(); toast('Dados de demonstração removidos.'); pageConfig();

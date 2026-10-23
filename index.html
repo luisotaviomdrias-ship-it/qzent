@@ -135,6 +135,54 @@ body{padding-bottom:76px}
 #toast-root{bottom:82px}
 @media(max-width:640px){.noir-credit{right:12px;bottom:12px;font-size:11px}}
 </style>
+<style>
+/* Mobile: readable controls, safe areas and content that fits narrow screens. */
+#app-workspace{min-width:0}
+#sidebar{max-width:calc(100vw - 32px)}
+#sidebar-close{margin-left:auto;flex-shrink:0}
+#sync-status{overflow-wrap:anywhere}
+#sync-message:empty{display:none}
+@media(max-width:1023px){
+  body.sidebar-open{overflow:hidden}
+  #sidebar{height:100vh;height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+  #sidebar>div{flex-shrink:0}
+  #sidebar nav{min-height:0;overscroll-behavior:contain}
+}
+@media(max-width:640px){
+  html{scroll-padding-top:80px}
+  .btn,.nav-item,.seg button{min-height:44px}
+  .btn{white-space:normal;text-align:center}
+  .btn svg{flex-shrink:0}
+  .input{min-height:44px;font-size:16px}
+  #btn-menu,#btn-logout-2,#vi-close,#sidebar-close{min-width:44px;min-height:44px}
+  #page-title{max-width:100%}
+  #app-workspace>header>div.min-w-0{flex:1}
+  #app-workspace>header>div.flex-1{display:none}
+  .card,.q-card,.public-question,.public-option,.grid>*,.flex>fieldset{min-width:0}
+  .public-question{padding:18px}
+  .public-option{min-height:48px}
+  .public-option span,.opt-chip,.badge{overflow-wrap:anywhere}
+  .badge{white-space:normal}
+  #public-content article .btn{display:flex;width:100%;margin-left:0;margin-top:12px}
+  #public-content article .btn:first-of-type{margin-top:0}
+  .tbl-wrap td{max-width:none;white-space:normal;overflow:visible;overflow-wrap:anywhere;flex-wrap:wrap}
+  .tbl-wrap td::before{flex-shrink:0}
+  .tbl-wrap td>div{min-width:0;flex-wrap:wrap}
+  #run-prev,#run-next,#run-finish{min-width:0;flex:1;padding-left:10px;padding-right:10px}
+  #modal-root .modal-bg{padding:12px;padding-top:max(12px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  #modal-root .card{max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
+  #modal-root .card>div{min-width:0;overflow-wrap:anywhere}
+  #modal-root .overflow-y-auto{min-height:0}
+  #toast-root{left:12px;right:12px;bottom:calc(82px + env(safe-area-inset-bottom));pointer-events:none}
+  .toast{max-width:none;overflow-wrap:anywhere}
+  .noir-credit{bottom:calc(12px + env(safe-area-inset-bottom))}
+  body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .fade-in,.dot-live,.skeleton::after{animation:none}
+}
+</style>
 </head>
 <body class="min-h-screen">
 <a class="noir-credit" href="https://noir-lt.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Made by Noir — visitar o site da Noir"><img src="data:image/jpeg;base64,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" alt="Pantera da Noir" width="30" height="30"><span>Made by <strong>NOIR</strong> ↗</span></a>
@@ -144,13 +192,14 @@ body{padding-bottom:76px}
 <!-- ══════════ APLICAÇÃO ══════════ -->
 <div id="app" class="hidden min-h-screen lg:flex">
   <div id="sidebar-overlay" class="hidden fixed inset-0 z-40 modal-bg lg:hidden"></div>
-  <aside id="sidebar" class="w-[248px] shrink-0 bg-[#0c0f15] border-r border-line flex flex-col">
+  <aside id="sidebar" aria-label="Navegação principal" class="w-[248px] shrink-0 bg-[#0c0f15] border-r border-line flex flex-col">
     <div class="flex items-center gap-3 px-5 h-16 border-b border-line">
       <img src="/assets/qzent-brain.png" alt="Logo QZent — cérebro azul" width="40" height="40" class="shrink-0 object-contain">
       <div class="leading-tight">
         <p class="font-extrabold text-[15px] text-white tracking-tight">QZent</p>
         <p class="text-[10px] text-muted">Painel Interno</p>
       </div>
+      <button id="sidebar-close" type="button" class="btn btn-ghost !p-2 lg:hidden" aria-label="Fechar menu">✕</button>
     </div>
     <nav id="nav" class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
     <div class="p-3 border-t border-line">
@@ -168,9 +217,9 @@ body{padding-bottom:76px}
     </div>
   </aside>
 
-  <div class="flex-1 min-w-0 flex flex-col">
+  <div id="app-workspace" class="flex-1 min-w-0 flex flex-col">
     <header class="sticky top-0 z-30 h-16 bg-[#0a0c10]/85 backdrop-blur border-b border-line flex items-center gap-3 px-4 md:px-7">
-      <button id="btn-menu" class="btn btn-ghost !p-2 lg:hidden" aria-label="Menu">
+      <button id="btn-menu" class="btn btn-ghost !p-2 lg:hidden" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="min-w-0">
@@ -182,10 +231,14 @@ body{padding-bottom:76px}
         <span class="dot dot-live"></span> Sistema operacional
       </div>
       <div class="hidden sm:flex items-center gap-2 text-xs text-muted bg-panel border border-line rounded-full px-3.5 py-1.5 font-medium" id="top-date"></div>
-      <button id="btn-logout-2" class="btn btn-ghost !p-2" title="Sair">
+      <button id="btn-logout-2" class="btn btn-ghost !p-2" title="Sair" aria-label="Sair da conta">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
       </button>
     </header>
+    <div id="sync-status" class="px-4 md:px-7 pt-3 max-w-[1400px] w-full mx-auto">
+      <button type="button" id="refresh-shared" class="btn btn-ghost text-xs">Atualizar pesquisas</button>
+      <p id="sync-message" role="status" aria-live="polite" class="text-amber-300 text-sm mt-2"></p>
+    </div>
     <main id="page" class="flex-1 p-4 md:p-7 max-w-[1400px] w-full mx-auto"></main>
   </div>
 </div>
@@ -623,13 +676,31 @@ const TITLES = {
 
 function renderNav(activeHash = location.hash) {
   $('#nav').innerHTML = NAV.map(n => `
-    <div class="nav-item ${activeHash.startsWith(n.hash) || (n.hash === '#/questionarios' && activeHash.startsWith('#/editor')) ? 'active' : ''}" data-nav="${n.hash}">
+    <button type="button" class="nav-item w-full text-left ${activeHash.startsWith(n.hash) || (n.hash === '#/questionarios' && activeHash.startsWith('#/editor')) ? 'active' : ''}" data-nav="${n.hash}">
       <span class="nav-ico">${ICONS[n.icon]}</span>${n.label}
-    </div>`).join('');
+    </button>`).join('');
   $$('#nav .nav-item').forEach(el => el.onclick = () => { navigate(el.dataset.nav); closeSidebar(); });
 }
-function closeSidebar() { $('#sidebar').classList.remove('open'); $('#sidebar-overlay').classList.add('hidden'); }
-function openSidebar()  { $('#sidebar').classList.add('open'); $('#sidebar-overlay').classList.remove('hidden'); }
+function closeSidebar() {
+  const sidebar = $('#sidebar'), wasOpen = sidebar.classList.contains('open');
+  sidebar.classList.remove('open');
+  $('#sidebar-overlay').classList.add('hidden');
+  document.body.classList.remove('sidebar-open');
+  $('#btn-menu').setAttribute('aria-expanded','false');
+  $('#app-workspace').inert = false;
+  if (wasOpen) $('#btn-menu').focus();
+  sidebar.inert = window.matchMedia('(max-width:1023px)').matches;
+}
+function openSidebar() {
+  if (!window.matchMedia('(max-width:1023px)').matches) return;
+  $('#sidebar').inert = false;
+  $('#sidebar').classList.add('open');
+  $('#sidebar-overlay').classList.remove('hidden');
+  document.body.classList.add('sidebar-open');
+  $('#btn-menu').setAttribute('aria-expanded','true');
+  $('#app-workspace').inert = true;
+  $('#sidebar-close').focus();
+}
 
 function route(requestedHash) {
   destroyCharts();
@@ -645,7 +716,7 @@ function route(requestedHash) {
   $('#page-title').textContent = t;
   $('#page-sub').textContent = s;
   const d = new Date();
-  $('#page-sub').innerHTML += ' <button type="button" id="refresh-shared" class="text-blue-400 underline ml-2">Atualizar pesquisas</button>';
+
   $('#refresh-shared').onclick = async () => {
     const button = $('#refresh-shared');
     if (button.disabled) return;
@@ -654,13 +725,7 @@ function route(requestedHash) {
     catch(err){route();toast(err.message,'error');}
     finally {button.disabled=false;button.textContent='Atualizar pesquisas';}
   };
-  if (Shared.error) {
-    const notice = document.createElement('p');
-    notice.className = 'text-amber-300 text-sm mt-2';
-    notice.setAttribute('role','alert');
-    notice.textContent = Shared.error;
-    $('#page-sub').appendChild(notice);
-  }
+  $('#sync-message').textContent = Shared.error || '';
   $('#top-date').innerHTML = `${ICONS.cal} ${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
   window.scrollTo({ top: 0 });
   $('#page').innerHTML = '';
@@ -720,7 +785,7 @@ function pageDashboard() {
       options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
     charts.room = new Chart($('#ch-room'), { type: 'doughnut',
       data: { labels: Object.keys(perRoom).sort(), datasets: [{ data: Object.keys(perRoom).sort().map(r => perRoom[r]), backgroundColor: Object.keys(perRoom).sort().map(roomColor), borderColor: '#cbd5e1', borderWidth: 2 }] },
-      options: { maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'right' } } } });
+      options: { maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: window.innerWidth < 640 ? 'bottom' : 'right' } } } });
     const dist = {};
     ivs.forEach(i => Object.entries(i.answers).forEach(([qid, v]) => {
       const q = (Service.qGet(i.questionnaireId) || { questions: [] }).questions.find(x => x.id === qid);
@@ -1219,7 +1284,7 @@ function viewInterview(id) {
             <p class="text-xs text-muted mt-1">Sala ${esc(iv.room)} · ${fmtDateTime(iv.date, iv.time)} · ${esc(iv.questionnaireTitle)}</p>
             ${iv.interviewer ? `<p class="text-xs text-muted mt-0.5">Entrevistador(a): ${esc(iv.interviewer)}</p>` : ''}
           </div>
-          <button class="btn btn-ghost !p-2" id="vi-close">${ICONS.x}</button>
+          <button class="btn btn-ghost !p-2" id="vi-close" aria-label="Fechar respostas">${ICONS.x}</button>
         </div>
         <div class="p-5 overflow-y-auto flex-1">
           ${rows || '<p class="text-sm text-muted">O questionário vinculado não foi encontrado.</p>'}
@@ -1323,7 +1388,7 @@ function pageResultados() {
       const keys = Object.keys(s.dist).sort((a, b) => s.dist[b] - s.dist[a]);
       charts['cc' + k] = new Chart($('#rc-c' + k), { type: 'doughnut',
         data: { labels: keys, datasets: [{ data: keys.map(x => s.dist[x]), backgroundColor: BLUE_SHADES, borderColor: '#0f131b', borderWidth: 3 }] },
-        options: { maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: 'right' } } } });
+        options: { maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: window.innerWidth < 640 ? 'bottom' : 'right' } } } });
     });
   };
   ['#r-q', '#r-room', '#r-period', '#r-name'].forEach(s => { $(s).onchange = debounce(render, 150); $(s).oninput = debounce(render, 250); });
@@ -1582,6 +1647,17 @@ async function boot() {
   loadDB();
   if (typeof Chart !== 'undefined') { try { chartDefaults(); } catch (_) {} }
   $('#btn-menu').onclick = openSidebar;
+  $('#sidebar-close').onclick = closeSidebar;
+  document.addEventListener('keydown', event => {
+    if (!$('#sidebar').classList.contains('open')) return;
+    if (event.key === 'Escape') {event.preventDefault();closeSidebar();return;}
+    if (event.key !== 'Tab') return;
+    const controls = [...$('#sidebar').querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]')].filter(el => !el.disabled && el.getClientRects().length);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {event.preventDefault();last?.focus();}
+    else if (!event.shiftKey && document.activeElement === last) {event.preventDefault();first?.focus();}
+  });
+  window.matchMedia('(max-width:1023px)').addEventListener('change',closeSidebar);
   $('#sidebar-overlay').onclick = closeSidebar;
   $('#btn-logout').onclick = () => Auth.logout();
   $('#btn-logout-2').onclick = () => Auth.logout();
